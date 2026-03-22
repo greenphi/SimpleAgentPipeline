@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PM Pipeline Log</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f5f5f5; color: #222; }
+
+    header { background: #1a1a2e; color: white; padding: 24px 32px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+    header h1 { font-size: 1.2rem; font-weight: 600; margin-bottom: 4px; }
+    header .idea { font-size: 0.9rem; color: #aab; }
+
+    nav { background: #16213e; padding: 10px 32px; display: flex; gap: 12px; flex-wrap: wrap; position: sticky; top: 72px; z-index: 99; border-bottom: 1px solid #0f3460; }
+    nav a { color: #7ec8e3; font-size: 0.82rem; text-decoration: none; padding: 4px 10px; border-radius: 12px; border: 1px solid #0f3460; transition: background 0.15s; }
+    nav a:hover { background: #0f3460; }
+
+    main { max-width: 960px; margin: 32px auto; padding: 0 24px 64px; }
+
+    .round { margin-bottom: 48px; }
+    .round-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #ddd; }
+    .round-badge { background: #1a1a2e; color: white; font-size: 0.8rem; font-weight: 700; padding: 4px 12px; border-radius: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .round-header h2 { font-size: 1.1rem; color: #555; font-weight: 500; }
+
+    .agent-block { border-radius: 8px; margin-bottom: 16px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    .agent-label { padding: 10px 16px; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; display: flex; align-items: center; gap: 8px; }
+    .agent-label .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+    .agent-content { padding: 20px 24px; background: white; font-size: 0.92rem; line-height: 1.7; }
+    .agent-content h2, .agent-content h3, .agent-content h4 { margin: 16px 0 6px; color: #333; }
+    .agent-content p { margin-bottom: 10px; }
+    .agent-content ul { margin: 8px 0 12px 20px; }
+    .agent-content li { margin-bottom: 6px; }
+    .agent-content strong { color: #111; }
+    .agent-content br { display: block; margin: 4px 0; }
+
+    .creative .agent-label { background: #e8f4fd; color: #1565c0; }
+    .creative .agent-label .dot { background: #1565c0; }
+    .creative .agent-content { border-top: 3px solid #1565c0; }
+
+    .critical .agent-label { background: #fce4ec; color: #ad1457; }
+    .critical .agent-label .dot { background: #ad1457; }
+    .critical .agent-content { border-top: 3px solid #ad1457; }
+
+    .convergence { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 20px; font-size: 0.82rem; font-weight: 600; margin-top: 12px; }
+    .convergence.yes { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+    .convergence.no  { background: #fff8e1; color: #f57f17; border: 1px solid #ffe082; }
+
+    .summary { background: white; border-radius: 8px; padding: 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); border-left: 4px solid #1a1a2e; margin-bottom: 32px; }
+    .summary h2 { font-size: 1rem; margin-bottom: 12px; color: #1a1a2e; }
+    .summary p { font-size: 0.92rem; color: #444; line-height: 1.6; }
+
+    .final-ideas { background: white; border-radius: 8px; padding: 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); border-left: 4px solid #1565c0; }
+    .final-ideas h2 { font-size: 1rem; margin-bottom: 16px; color: #1565c0; }
+    .final-ideas .content { font-size: 0.92rem; line-height: 1.7; }
+    .final-ideas .content p { margin-bottom: 10px; }
+    .final-ideas .content ul { margin: 8px 0 12px 20px; }
+    .final-ideas .content li { margin-bottom: 6px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>PM Pipeline Log</h1>
+    <div class="idea">Idea: I want to experiment with implementing compression algorithms from scratch to learn how they work</div>
+  </header>
+  <nav id="nav">
+    <a href="#summary">Summary</a>
+    <a href="#round-1">Round 1</a>
+    <a href="#round-2">Round 2</a>
+    <a href="#round-3">Round 3</a>
+    <a href="#round-4">Round 4</a>
+    <a href="#final">Final Ideas</a>
+  </nav>
+  <main>
+    <div class="round" id="round-1">
+      <div class="round-header">
+        <span class="round-badge">Round 1</span>
+        <h2>Ideation &amp; Evaluation</h2>
+      </div>
+      <div class="agent-block creative">
+        <div class="agent-label"><span class="dot"></span> Creative PM</div>
+        <div class="agent-content"><h2>Compression Algorithm Explorer — Feature Ideas</h2>
+<br>
+<p>---</p>
+<br>
+<h3>1. <strong>Algorithm Visualizer</strong></h3>
+<p>Step-by-step animated visualization of how data transforms at each stage of compression (e.g., watch Huffman trees grow in real time, see LZ77 sliding windows move). Users can pause, rewind, and inspect individual bytes. <strong>User value:</strong> Builds deep intuition by making the invisible visible. <strong>Complexity:</strong> Medium</p>
+<br>
+<p>---</p>
+<br>
+<h3>2. <strong>Compression Duel Mode</strong></h3>
+<p>Pit two algorithms head-to-head on the same input — side-by-side stats on compression ratio, speed, and memory usage update live as both run. <strong>User value:</strong> Instantly reveals trade-offs that textbooks only describe abstractly. <strong>Complexity:</strong> Low</p>
+<br>
+<p>---</p>
+<br>
+<h3>3. <strong>"Break It" Adversarial Inputs</strong></h3>
+<p>A library of pathological inputs (already-compressed data, random bytes, repeated patterns) that expose each algorithm's worst-case behavior. Includes a mode where users craft their own adversarial payloads. <strong>User value:</strong> Forces genuine understanding of edge cases, not just happy paths. <strong>Complexity:</strong> Low</p>
+<br>
+<p>---</p>
+<br>
+<h3>4. <strong>Annotated Source with "Why This Line?" Tooltips</strong></h3>
+<p>Every line of the from-scratch implementation carries an inline annotation explaining *why* it exists — linking to the mathematical concept, the original paper, and a counterexample of what breaks without it. <strong>User value:</strong> Bridges the gap between working code and true comprehension. <strong>Complexity:</strong> Medium</p>
+<br>
+<p>---</p>
+<br>
+<h3>5. <strong>Compression Archaeology Mode</strong></h3>
+<p>Implement historical algorithms in chronological order (Huffman 1952 → LZ77 1977 → DEFLATE 1996 → Zstandard 2016), with a timeline showing how each improved on the last. <strong>User value:</strong> Gives narrative context — learning *feels* like discovery rather than memorization. <strong>Complexity:</strong> Medium</p>
+<br>
+<p>---</p>
+<br>
+<h3>6. <strong>Live Entropy Meter</strong></h3>
+<p>As users feed any text or file into their implementation, a real-time entropy score shows how much theoretical compression headroom remains. Flags over- and under-compression. <strong>User value:</strong> Grounds abstract information theory in concrete, immediate feedback. <strong>Complexity:</strong> Low</p>
+<br>
+<p>---</p>
+<br>
+<h3>7. <strong>Regression Test Harness with Corpus</strong></h3>
+<p>A curated corpus (source code, images, genomic data, logs) with a one-command test runner that measures correctness *and* performance against reference implementations. <strong>User value:</strong> Removes the tedious scaffolding so learners stay focused on the algorithm, not the tooling. <strong>Complexity:</strong> Medium</p>
+<br>
+<p>---</p>
+<br>
+<h3>8. <strong>"Cheat Code" Escape Hatch</strong></h3>
+<p>At any point a user can reveal a reference implementation of the exact function they're struggling with, diff'd against their own attempt, with plain-language commentary on differences. <strong>User value:</strong> Prevents frustration from killing momentum — learning continues even when stuck. <strong>Complexity:</strong> Low</p>
+<br>
+<p>---</p>
+<br>
+<p>Want me to cut, expand, or pivot any of these in the next round?</p></div>
+      </div>
+      <div class="agent-block critical">
+        <div class="agent-label"><span class="dot"></span> Critical PM</div>
+        <div class="agent-content"><h3>Critical PM Evaluation: Compression Algorithm Explorer</h3>
+<br>
+<p>---</p>
+<br>
+<h4>Scoring Matrix</h4>
+<br>
+<p>| # | Idea | Feasibility | User Impact | Effort (lower = less work) | Notes |</p>
+<p>|---|------|-------------|-------------|---------------------------|-------|</p>
+<p>| 1 | Algorithm Visualizer | 6 | 9 | 5 | High payoff but deceptively hard to do well |</p>
+<p>| 2 | Compression Duel Mode | 9 | 8 | 9 | Quick to build, immediately compelling |</p>
+<p>| 3 | "Break It" Adversarial Inputs | 9 | 8 | 8 | Low effort, high educational density |</p>
+<p>| 4 | Annotated Source Tooltips | 7 | 9 | 5 | Effort is in *writing quality annotations*, not code |</p>
+<p>| 5 | Compression Archaeology | 7 | 7 | 4 | Scope creep risk; implementing 4+ algorithms well is a lot |</p>
+<p>| 6 | Live Entropy Meter | 9 | 7 | 8 | Straightforward, grounded in real theory |</p>
+<p>| 7 | Regression Test Harness | 8 | 8 | 6 | Unsexy but genuinely removes friction |</p>
+<p>| 8 | "Cheat Code" Escape Hatch | 9 | 9 | 8 | High retention value, surprisingly low effort |</p>
+<br>
+<p>---</p>
+<br>
+<h4>Fatal Flaws — Cut or Severely Scope</h4>
+<br>
+<strong>#5 — Compression Archaeology Mode: FLAGGED</strong>
+<p>The narrative framing is charming, but implementing Huffman, LZ77, DEFLATE, *and* Zstandard from scratch at a quality bar that justifies comparison is a project-within-a-project. DEFLATE alone is notoriously intricate. The risk: you ship shallow versions of all four and the "discovery" narrative falls flat because the implementations are too simplified to teach anything meaningful. <strong>Recommendation: cut as a standalone feature.</strong> The chronological framing can be a lightweight UI layer on top of features you're already building (e.g., Duel Mode + Visualizer), not a separate implementation track.</p>
+<br>
+<p>---</p>
+<br>
+<h4>Ranked Remaining Ideas</h4>
+<br>
+<p>1. <strong>#8 — Cheat Code Escape Hatch</strong> — Highest retention lever. Learners quit when stuck. This prevents that at low cost. Ship first.</p>
+<p>2. <strong>#2 — Compression Duel Mode</strong> — Fast to build, immediately differentiating, drives the "aha" moment around trade-offs. Core feature.</p>
+<p>3. <strong>#3 — "Break It" Adversarial Inputs</strong> — Low effort, high density. Forces real understanding. Most curated content already exists in test suites.</p>
+<p>4. <strong>#4 — Annotated Source Tooltips</strong> — High impact but the bottleneck is editorial quality, not engineering. Schedule after MVP; rushed annotations are worse than none.</p>
+<p>5. <strong>#7 — Regression Test Harness</strong> — Unsexy but critical for credibility. Learners need to know their implementation is actually correct.</p>
+<p>6. <strong>#6 — Live Entropy Meter</strong> — Good feedback loop, approachable theory hook. Lower priority only because it's complementary, not standalone.</p>
+<p>7. <strong>#1 — Algorithm Visualizer</strong> — Highest ceiling but also highest risk of shipping something mediocre. A bad visualizer teaches nothing. Only build this if you can do it properly — defer until post-MVP.</p>
+<br>
+<p>---</p>
+<br>
+<h4>Convergence Assessment</h4>
+<br>
+<p>The ideas are directionally sound but the set lacks a clear <strong>MVP core</strong>. Right now there are 7 surviving features with no forced prioritization. Before moving to execution you need to answer: *what is the one experience a user has in their first 10 minutes?* The current list reads like a feature catalog, not a product.</p>
+<br>
+<p>The Visualizer (#1) and Annotated Source (#4) are the most defensible long-term differentiators but both require significant quality investment. Don't let the cheap wins (Duel Mode, Adversarial Inputs, Cheat Code) become the whole product.</p>
+<br>
+<strong>Next round should define:</strong> MVP scope (pick 3), target user (student vs. practicing engineer), and whether this is a web app, CLI tool, or embedded docs experience — that decision dramatically changes feasibility scores for #1 and #4.<div class="convergence no">&#8635; Needs refinement &mdash; Ideas are individually solid but lack MVP definition and forced prioritization. Need to specify target user, delivery format (web/CLI/docs), and a 3-feature MVP before execution planning is viable. Cut Archaeology as standalone; clarify whether Visualizer is in or out of v1.</div></div>
+      </div>
+    </div>
+    <div class="round" id="round-2">
+      <div class="round-header">
+        <span class="round-badge">Round 2</span>
+        <h2>Ideation &amp; Evaluation</h2>
+      </div>
+      <div class="agent-block creative">
+        <div class="agent-label"><span class="dot"></span> Creative PM</div>
+        <div class="agent-content"><h3>Compression Algorithm Explorer — Round 3: MVP Definition</h3>
+<br>
+<p>The critical feedback is right: this needs decisions, not more features. Here's an opinionated round that answers the three open questions and resets around a coherent product.</p>
+<br>
+<p>---</p>
+<br>
+<h4>Decisions Made</h4>
+<br>
+<strong>Target user:</strong> Self-taught engineers and CS students implementing compression for the first time. Not practicing engineers — they'd use the library directly.
+<br>
+<strong>Delivery format:</strong> Web app. The target user needs zero setup friction, and visualizations require a browser anyway.
+<br>
+<strong>Visualizer (#1) in v1?</strong> No. A mediocre visualizer is worse than none. Deferred to v2 with a tighter scope (see below).
+<br>
+<p>---</p>
+<br>
+<h4>MVP Core — Ship These 3</h4>
+<br>
+<p>---</p>
+<br>
+<p>#### MVP-A. <strong>"First 10 Minutes" Guided Sandbox</strong></p>
+<p>A single-page experience: paste or type any text, watch your implementation compress it live, and see three numbers update in real time — compressed size, ratio, and entropy headroom. No setup, no configuration. The page loads with a pre-filled "Hello, world" example so the first result appears before the user writes a single line. <strong>User value:</strong> Answers "does my thing actually work?" in under a minute. Replaces the blank-page paralysis of "now what do I build?" <strong>Complexity:</strong> Low</p>
+<br>
+<p>---</p>
+<br>
+<p>#### MVP-B. <strong>Cheat Code Escape Hatch</strong> *(refined from #8)*</p>
+<p>Unchanged in concept, sharpened in scope: the escape hatch is scoped to *functions*, not files. The user clicks a struggling function, sees a reference implementation side-by-side, and gets exactly three annotations — what it does, why it's structured that way, and the one mistake almost everyone makes here. No wall of commentary. <strong>User value:</strong> Prevents the dropout moment. Keeps learners moving without handing them the whole answer. <strong>Complexity:</strong> Low</p>
+<br>
+<p>---</p>
+<br>
+<p>#### MVP-C. <strong>Compression Duel Mode</strong> *(refined from #2)*</p>
+<p>Unchanged. Two algorithms, same input, live stats. One addition from feedback: a <strong>"why did X win?"</strong> one-liner that auto-generates based on input characteristics (e.g., "LZ77 won because your input has long repeated substrings — Huffman only exploits frequency, not position"). <strong>User value:</strong> Turns a stat comparison into a lesson. The explanation makes the trade-off stick. <strong>Complexity:</strong> Low–Medium</p>
+<br>
+<p>---</p>
+<br>
+<h4>Post-MVP Backlog (Ranked)</h4>
+<br>
+<p>---</p>
+<br>
+<p>#### 4. <strong>"Break It" Adversarial Inputs</strong> *(from #3)*</p>
+<p>Unchanged. Moves to v1.1 — it's low effort and pairs naturally with Duel Mode once that ships.</p>
+<br>
+<p>---</p>
+<br>
+<p>#### 5. <strong>Regression Test Harness with Corpus</strong> *(from #7)*</p>
+<p>Moves to v1.1. The guided sandbox (MVP-A) gives qualitative feedback; this gives correctness guarantees. Together they form a complete feedback loop.</p>
+<br>
+<p>---</p>
+<br>
+<p>#### 6. <strong>Annotated Source Tooltips</strong> *(from #4)*</p>
+<p>Deferred to v2. The bottleneck is editorial quality, not engineering. Rushed annotations actively harm comprehension. Commission these only when there's time to do them right.</p>
+<br>
+<p>---</p>
+<br>
+<p>#### 7. <strong>Live Entropy Meter</strong> *(from #6)*</p>
+<p>Absorbed into MVP-A as a metric rather than a standalone feature. Preserved as a concept; eliminated as a line item.</p>
+<br>
+<p>---</p>
+<br>
+<p>#### 8. <strong>Algorithm Visualizer</strong> *(from #1, re-scoped)*</p>
+<strong>v2, scoped to one algorithm only.</strong> Instead of animating everything, build a world-class Huffman tree visualizer and nothing else. One algorithm done beautifully is a differentiator. Four algorithms done adequately is noise. The constraint forces quality. <strong>Complexity:</strong> Medium (was High when unbounded)
+<br>
+<p>---</p>
+<br>
+<p>#### 9. <strong>Compression Archaeology</strong> *(from #5, reframed)*</p>
+<p>Not a feature — a <strong>content layer</strong>. Once Duel Mode ships, add a "History" tab that surfaces a timeline blurb when two algorithms from different eras are compared. Zero additional implementation, high narrative payoff. <strong>Complexity:</strong> Low (was Medium as standalone)</p>
+<br>
+<p>---</p>
+<br>
+<h4>New Idea: <strong>10. Implementation Health Score</strong></h4>
+<br>
+<p>After a user submits their implementation, run it against five hidden test cases and return a single score (0–100) with a breakdown: correctness, compression ratio vs. reference, speed percentile, and edge-case handling. Shown as a simple dashboard card, not a wall of output. <strong>User value:</strong> Gives learners a goal to chase and a clear signal of where they stand — without requiring them to interpret raw benchmark numbers. <strong>Complexity:</strong> Medium</p>
+<br>
+<p>---</p>
+<br>
+<h4>What's Different This Round</h4>
+<br>
+<p>| Decision | Previous State | Now |</p>
+<p>|---|---|---|</p>
+<p>| Target user | Undefined | Self-taught engineers / CS students |</p>
+<p>| Delivery format | Undefined | Web app |</p>
+<p>| MVP scope | 7 surviving features | 3 features (A, B, C) |</p>
+<p>| Visualizer | Uncertain | Deferred to v2, scoped to Huffman only |</p>
+<p>| Archaeology | Cut as feature | Reborn as a content layer on Duel Mode |</p>
+<p>| Entropy Meter | Standalone feature | Absorbed into Guided Sandbox |</p></div>
+      </div>
+      <div class="agent-block critical">
+        <div class="agent-label"><span class="dot"></span> Critical PM</div>
+        <div class="agent-content"><h3>Critical PM Evaluation: Round 3</h3>
+<br>
+<h4>Scoring</h4>
+<br>
+<p>| # | Feature | Feasibility | User Impact | Effort (1=low) | Notes |</p>
+<p>|---|---|---|---|---|---|</p>
+<p>| A | Guided Sandbox | 6 | 9 | 4 | Conditional fatal flaw (see below) |</p>
+<p>| B | Escape Hatch | 8 | 8 | 3 | Interaction model underspecified |</p>
+<p>| C | Duel Mode | 9 | 8 | 4 | Strongest MVP feature |</p>
+<p>| 4 | Break It | 9 | 6 | 2 | Simple, pairs well with C |</p>
+<p>| 5 | Regression Harness | 7 | 8 | 6 | Shares fatal flaw with A |</p>
+<p>| 6 | Annotated Tooltips | 7 | 5 | 7 | Redundant with B; editorial bottleneck |</p>
+<p>| 8 | Huffman Visualizer | 8 | 7 | 5 | Smart scoping decision |</p>
+<p>| 9 | Archaeology | 10 | 4 | 1 | Content layer is clever but low-leverage |</p>
+<p>| 10 | Health Score | 5 | 8 | 7 | Shares fatal flaw with A |</p>
+<br>
+<p>---</p>
+<br>
+<h4>Fatal Flaws</h4>
+<br>
+<strong>MVP-A and #10 share a critical unresolved question: how does user code execute?</strong>
+<br>
+<p>The entire value proposition of MVP-A is "watch *your* implementation compress it live." But this is a web app with zero setup. Those two constraints are in direct tension. The options are:</p>
+<br>
+<p>1. <strong>Browser sandbox</strong> (WebWorkers + eval/Function constructor) — possible, but executing arbitrary user code in the browser is a security surface, and the experience degrades badly when users write Python, not JS.</p>
+<p>2. <strong>Backend execution service</strong> — adds real infrastructure, contradicts "zero setup" for the *user*, and introduces a new complexity tier.</p>
+<p>3. <strong>Reference implementation only</strong> — kills the stated value proposition entirely. It becomes a demo, not a learning tool.</p>
+<br>
+<p>None of these are acknowledged. Until one is chosen, MVP-A's feasibility score of 6 may be generous, and #10's 5 is charitable. Both features need to be re-scoped around whichever execution model is selected.</p>
+<br>
+<strong>MVP-B has an underspecified interaction model.</strong> "The user clicks a struggling function" — which function, from where? Is the user submitting code to the platform? Is this tied to a file upload, a code editor embedded in the app, or something else? The escape hatch only makes sense if the system knows what the user is working on. This isn't fatal, but it's hand-wavy enough to cause a scope explosion in implementation.
+<br>
+<strong>#6 (Annotated Tooltips) is redundant and should be cut.</strong> MVP-B already provides inline guidance at the function level. Tooltips on source code add an overlapping content layer with lower contextual relevance. The editorial cost isn't justified when B already covers the "I'm confused" moment.
+<br>
+<p>---</p>
+<br>
+<h4>Survivng Features, Ranked</h4>
+<br>
+<p>1. <strong>MVP-C (Duel Mode)</strong> — highest confidence feature in the set. Technically clean, educationally sound, the auto-explanation differentiates it from a raw stat table. Build this first.</p>
+<p>2. <strong>MVP-B (Escape Hatch)</strong> — high value, low effort, but needs one sentence of interaction model clarity before sprint planning.</p>
+<p>3. <strong>MVP-A (Guided Sandbox)</strong> — right instinct, wrong confidence level. Needs the execution model decision before it can be scoped. Could be the highest-impact feature *or* a significant infrastructure bet depending on that answer.</p>
+<p>4. <strong>#4 (Break It)</strong> — easiest post-MVP add. Curated adversarial inputs are just content; pairs naturally with Duel Mode.</p>
+<p>5. <strong>#5 (Regression Harness)</strong> — valuable for correctness but inherits the execution model problem. Unblock only after MVP-A is resolved.</p>
+<p>6. <strong>#8 (Huffman Visualizer)</strong> — smart constraint. Right call to defer; wrong to rank it ahead of correctness tooling for the target user.</p>
+<p>7. <strong>#10 (Health Score)</strong> — gamification is a real motivator, but this is the hardest feature to build safely and correctly. Medium effort is optimistic; execution infrastructure alone is a sprint.</p>
+<p>8. <strong>#9 (Archaeology)</strong> — kept as a micro-content addition. Doesn't deserve a backlog slot; belongs in a content ticket if Duel Mode ships.</p>
+<br>
+<strong>Cut:</strong> #6 (Annotated Tooltips) — redundant with MVP-B, high editorial cost, low marginal value.
+<br>
+<p>---</p>
+<br>
+<h4>Convergence Verdict</h4>
+<br>
+<p>The strategic decisions made this round are correct and overdue. Target user, delivery format, and MVP scope are all better. The product is significantly more coherent than Round 2.</p>
+<br>
+<p>But there is one blocking decision that was skipped: <strong>the code execution model</strong>. It sits underneath two of the three MVP features (A and B's interaction design depends on it, as does #5 and #10). Making the wrong call here — or leaving it ambiguous into implementation — will cause scope explosions mid-build. This needs one more pass, not more feature ideation: just answer the execution question and re-scope A accordingly.</p><div class="convergence no">&#8635; Needs refinement &mdash; One blocking architecture decision was skipped: how does user code actually execute in a zero-setup web app? This sits underneath MVP-A, #5, and #10 and will cause mid-build scope explosions if left ambiguous. Resolve the execution model (browser sandbox vs. backend service vs. reference-only) and re-scope MVP-A around that answer. Everything else is ready to build.</div></div>
+      </div>
+    </div>
+    <div class="round" id="round-3">
+      <div class="round-header">
+        <span class="round-badge">Round 3</span>
+        <h2>Ideation &amp; Evaluation</h2>
+      </div>
+      <div class="agent-block creative">
+        <div class="agent-label"><span class="dot"></span> Creative PM</div>
+        <div class="agent-content"><h3>Compression Algorithm Explorer — Round 4: Unblocking the Execution Model</h3>
+<br>
+<p>The feedback is correct. This round makes one architectural decision and re-scopes everything downstream of it. No new features.</p>
+<br>
+<p>---</p>
+<br>
+<h4>The Decision: Browser-Embedded Editor + WebWorkers</h4>
+<br>
+<strong>Execution model chosen:</strong> Users write and edit compression algorithms directly inside a Monaco editor embedded in the app. Code runs client-side in a WebWorker — sandboxed, no backend, no setup. Language is JavaScript only.
+<br>
+<strong>Why this wins over the alternatives:</strong>
+<br>
+<p>| Option | Verdict |</p>
+<p>|---|---|</p>
+<p>| Backend execution service | Adds a full infrastructure tier; contradicts zero-setup spirit; introduces latency |</p>
+<p>| Eval/Function constructor (no sandbox) | Unacceptable security surface |</p>
+<p>| Reference implementation only | Kills the stated value prop entirely |</p>
+<p>| <strong>Monaco + WebWorker (JS only)</strong> | Zero backend, genuinely sandboxed, load-in-and-go |</p>
+<br>
+<strong>The JS-only constraint is acceptable.</strong> The target user is a self-taught engineer or CS student implementing compression for the first time. They are not implementing in C++ for performance reasons — they are implementing to understand the algorithm. JavaScript is fine. The constraint should be visible on the landing page, not buried.
+<br>
+<p>---</p>
+<br>
+<h4>Re-Scoped Features</h4>
+<br>
+<p>---</p>
+<br>
+<p>#### MVP-A. <strong>"First 10 Minutes" Guided Sandbox</strong> *(re-scoped)*</p>
+<br>
+<p>A Monaco editor loads pre-filled with a starter Huffman skeleton — just enough scaffolding to run without error. The user edits the algorithm directly in the browser; a WebWorker picks up changes on each keystroke and streams three live metrics: compressed size, ratio, and entropy headroom. No uploads, no accounts, no configuration. The page works the moment it loads. <strong>Execution model:</strong> WebWorker running user's JS against a fixed input corpus. <strong>Interaction model:</strong> The editor *is* the submission surface — there's no "submit" button. <strong>User value:</strong> Answers "does my thing actually work?" in under a minute. <strong>Complexity:</strong> Medium (was uncertain; now scoped — Monaco embed + WebWorker harness is well-trodden)</p>
+<br>
+<p>---</p>
+<br>
+<p>#### MVP-B. <strong>Cheat Code Escape Hatch</strong> *(interaction model resolved)*</p>
+<br>
+<p>The escape hatch is now grounded in the editor. The user selects any function in the Monaco editor and hits a single keyboard shortcut (Cmd+K). A panel slides in alongside the editor — not a modal, not a new page — showing a reference implementation of that function, exactly three annotations, and nothing else. The system identifies which function was selected via the Monaco selection API; no ML, no inference. If nothing is selected, the shortcut is a no-op. <strong>User value:</strong> Prevents the dropout moment without leaving the editor context. <strong>Complexity:</strong> Low (was hand-wavy; now concrete)</p>
+<br>
+<p>---</p>
+<br>
+<p>#### MVP-C. <strong>Compression Duel Mode</strong> *(unchanged, confirmed)*</p>
+<br>
+<p>Two algorithm editors side-by-side, same input, live stats, auto-generated "why did X win?" one-liner based on input characteristics. <strong>Complexity:</strong> Low–Medium. Build this first — it has no dependencies on the execution model decision and can ship while A and B are being polished.</p>
+<br>
+<p>---</p>
+<br>
+<h4>Downstream Re-Scopes</h4>
+<br>
+<strong>#5 (Regression Harness):</strong> Unblocked. The test harness runs user code from the Monaco editor through a WebWorker against a hidden corpus. No backend needed; the corpus is bundled as a static asset. Complexity drops from Medium to Low–Medium.
+<br>
+<strong>#10 (Health Score):</strong> Partially unblocked. Correctness, ratio, and edge-case metrics are now computable client-side. Speed percentile requires a leaderboard backend — split into two: <strong>Health Score Lite</strong> (client-only, ships with v1.1) and <strong>Speed Percentile</strong> (requires backend, deferred to v2).
+<br>
+<p>---</p>
+<br>
+<h4>Final MVP Stack</h4>
+<br>
+<p>| Feature | Execution Dependency | Status |</p>
+<p>|---|---|---|</p>
+<p>| C — Duel Mode | None | Ready to build now |</p>
+<p>| B — Escape Hatch | Monaco selection API | Ready to build now |</p>
+<p>| A — Guided Sandbox | WebWorker harness | Ready to build; harness is the first engineering task |</p>
+<br>
+<strong>Build order:</strong> C → WebWorker harness → A → B. Duel Mode ships fastest and validates the editor pattern that A and B depend on.
+<br>
+<p>---</p>
+<br>
+<h4>What Changed This Round</h4>
+<br>
+<p>| Question | Previous State | Now |</p>
+<p>|---|---|---|</p>
+<p>| Execution model | Unresolved | Monaco + WebWorker, JS only |</p>
+<p>| MVP-A feasibility | 6 (uncertain) | 8 (scoped) |</p>
+<p>| MVP-B interaction | Hand-wavy | Grounded in Monaco selection API |</p>
+<p>| #5 complexity | Medium–High | Low–Medium (no backend) |</p>
+<p>| #10 | Single feature | Split into Lite (v1.1) and full (v2) |</p>
+<p>| Annotated Tooltips (#6) | Cut last round | Confirmed cut |</p></div>
+      </div>
+      <div class="agent-block critical">
+        <div class="agent-label"><span class="dot"></span> Critical PM</div>
+        <div class="agent-content"><h3>Round 4 Evaluation</h3>
+<br>
+<h4>Architectural Decision: Monaco + WebWorker</h4>
+<br>
+<p>This is the right call and it unblocks everything downstream. The tradeoff table is honest. JS-only is acceptable given the stated target user. No objections — this is a load-bearing decision that was previously missing and is now made.</p>
+<br>
+<p>One issue with the build order claim: <strong>Duel Mode does not ship before the WebWorker harness.</strong> It requires code execution. The phrase "no dependencies on the execution model decision" means it doesn't *inform* the decision — it doesn't mean it runs without the harness. The build order C → WebWorker harness → A → B implies you start designing C, build the harness, then finish C. That's fine, but the framing is slightly misleading. Clarify this before handing to engineering.</p>
+<br>
+<p>---</p>
+<br>
+<h4>Feature Scores</h4>
+<br>
+<p>| Feature | Feasibility | User Impact | Effort | Notes |</p>
+<p>|---|---|---|---|---|</p>
+<p>| MVP-A Guided Sandbox | 8 | 9 | 6 | Core loop. WebWorker harness is the crux — budget engineering time there first |</p>
+<p>| MVP-B Escape Hatch | 9 | 7 | 3 | Most concrete feature in the stack. High confidence. |</p>
+<p>| MVP-C Duel Mode | 7 | 8 | 5 | "Why X won" one-liner is still hand-wavy — see below |</p>
+<p>| #5 Regression Harness | 8 | 6 | 4 | Correct descope. Power-user feature, not a growth driver |</p>
+<p>| #10 Health Score Lite | 9 | 7 | 3 | Easy win. Split from Speed Percentile was the right call |</p>
+<p>| #10 Speed Percentile | — | — | — | Correctly deferred. Do not revisit until v2 backend exists |</p>
+<br>
+<p>---</p>
+<br>
+<h4>Fatal Flaws</h4>
+<br>
+<strong>None that kill a feature.</strong> One near-fatal implementation assumption:
+<br>
+<strong>MVP-A: Keystroke-triggered execution is a performance time bomb.</strong> Running full compression through a WebWorker on *every keystroke* against a corpus will lag on any non-trivial algorithm. The spec does not mention debouncing. This needs to be explicit: run on idle (e.g., 300ms after last keystroke), not on every keypress. Not fatal, but if engineering builds it naively you will have a bad demo and blame the architecture instead of the spec.
+<br>
+<p>---</p>
+<br>
+<h4>The One Remaining Loose Thread</h4>
+<br>
+<strong>Duel Mode's "why did X win?" one-liner.</strong> The previous round flagged this as underspecified. It is still underspecified. "Based on input characteristics" is not an implementation plan. Is this rule-based? If so, what rules? (e.g., "Algorithm A achieves better ratio because input entropy is below 4.2 bits/symbol — Huffman thrives here.") If it requires inspecting algorithm internals, that's much harder. This needs one concrete example of what the one-liner actually says before engineering touches it. It is the only remaining product-level unknown — everything else is resolved.
+<br>
+<p>---</p>
+<br>
+<h4>Ranking</h4>
+<br>
+<p>1. <strong>MVP-A (Guided Sandbox)</strong> — Highest impact. This is the entire value proposition. Everything else is in service of making this moment work.</p>
+<p>2. <strong>MVP-C (Duel Mode)</strong> — Strong learning mechanic, ships validation of the editor pattern. Unblock the one-liner first.</p>
+<p>3. <strong>MVP-B (Escape Hatch)</strong> — Highest confidence of any feature. Prevents dropout with almost no engineering cost.</p>
+<p>4. <strong>#10 Health Score Lite</strong> — Cheap, gives users a quality signal, ships with v1.1 without heroics.</p>
+<p>5. <strong>#5 Regression Harness</strong> — Correct to include; ships after core loop is stable.</p>
+<br>
+<p>---</p>
+<br>
+<h4>Convergence Verdict</h4>
+<br>
+<p>The architecture is resolved. Five of six open questions from prior rounds are closed. What remains is one product-level gap (Duel Mode one-liner logic) and one implementation assumption that needs to be made explicit (debounce on keystroke execution). These are not blockers for starting C and the harness — but they must be resolved before A and C are considered shippable.</p><div class="convergence no">&#8635; Needs refinement &mdash; One product-level gap remains: Duel Mode's 'why X won' one-liner needs a concrete example or rule-set before engineering can implement it. Additionally, keystroke-triggered execution in MVP-A must explicitly specify debounce behavior to avoid building a performance problem into the spec. Resolve these two points — everything else is ready.</div></div>
+      </div>
+    </div>
+    <div class="round" id="round-4">
+      <div class="round-header">
+        <span class="round-badge">Round 4</span>
+        <h2>Ideation &amp; Evaluation</h2>
+      </div>
+      <div class="agent-block creative">
+        <div class="agent-label"><span class="dot"></span> Creative PM</div>
+        <div class="agent-content"><h3>Compression Algorithm Explorer — Round 5: Closing the Last Two Gaps</h3>
+<br>
+<p>Two open items. This round resolves both. No new features, no scope changes.</p>
+<br>
+<p>---</p>
+<br>
+<h4>Gap 1: Duel Mode "Why X Won" One-Liner — Rule-Based System</h4>
+<br>
+<p>The one-liner is <strong>rule-based, not ML-based.</strong> It reads three metrics already computed by the WebWorker — input entropy, compression ratio delta, and encode/decode symmetry — and selects from a small decision table. Here is the complete rule-set:</p>
+<br>
+<p>| Condition | One-liner template |</p>
+<p>|---|---|</p>
+<p>| Input entropy &lt; 4.2 bits/symbol AND A wins on ratio | "A wins: low-entropy input rewards symbol-frequency coding. Huffman thrives here." |</p>
+<p>| Input entropy &gt; 6.5 bits/symbol AND neither beats raw by &gt;5% | "Neither algorithm found much to compress — high-entropy input leaves little headroom for either approach." |</p>
+<p>| A wins on ratio but B wins on speed (encode time delta &gt; 20%) | "A compresses tighter; B is faster. Depends whether you're optimizing for size or throughput." |</p>
+<p>| B wins on ratio AND entropy is mid-range (4.2–6.5) | "B finds more structure in this input. Mid-range entropy often rewards dictionary-based approaches." |</p>
+<p>| Ratio delta &lt; 2% | "Too close to call on compression — check encode time as the tiebreaker." |</p>
+<p>| Any edge-case corpus file (e.g. already-compressed input) | "Input is nearly incompressible — both algorithms are working against the format, not with it." |</p>
+<br>
+<strong>Implementation note:</strong> The rule table is a static lookup evaluated after each WebWorker run. The metrics driving it are already computed. Engineering cost: near zero — this is a switch statement on existing outputs. The one-liner renders below the stat cards, not inline.
+<br>
+<strong>One concrete example for the spec:</strong> User pits their Huffman implementation against a run-length encoder on a BMP image corpus. Entropy reads 3.1 bits/symbol. Output: *"A wins: low-entropy input rewards symbol-frequency coding. Huffman thrives here."*
+<br>
+<strong>Edge case:</strong> If no rule fires (this should be rare given the coverage above), the fallback is: *"A edges out B — check the ratio and encode time breakdown above for details."* No silent failures.
+<br>
+<p>---</p>
+<br>
+<h4>Gap 2: MVP-A Keystroke Execution — Explicit Debounce Spec</h4>
+<br>
+<strong>Execution triggers on idle, not on keypress.</strong> The spec is:
+<br>
+<ul>
+<li>WebWorker run fires <strong>300ms after the last keystroke</strong> (standard input debounce)</li>
+<li>If a run is already in-flight when the debounce fires, the new run is queued and the in-flight run is terminated via `worker.terminate()` — no double-execution</li>
+<li>While a run is in-flight, the three live metric cards show a subtle pulse animation (not a spinner, not a loading bar — just a low-opacity pulse on the number itself)</li>
+<li>If a run exceeds <strong>2 seconds</strong>, it is terminated and the metric cards show "—" with a tooltip: *"Execution timed out — try a smaller input or check for infinite loops"*</li>
+<li>The 2-second timeout is the only hard guardrail against runaway algorithms; no other intervention</li>
+</ul>
+<br>
+</ul>
+<strong>Why 300ms:</strong> Standard for live-preview editors (VS Code, CodePen, CodeSandbox all use this range). Fast enough to feel live; slow enough to avoid hammering the WebWorker on fast typists.
+<br>
+<strong>Engineering note for the spec:</strong> The debounce lives in the main thread, not the worker. The worker is stateless — it receives a payload (code + corpus chunk), runs once, posts results back, and exits. Main thread manages all scheduling.
+<br>
+<p>---</p>
+<br>
+<h4>Updated Feature Table</h4>
+<br>
+<p>| Feature | Status | Remaining gaps |</p>
+<p>|---|---|---|</p>
+<p>| MVP-C Duel Mode | <strong>Ready to build</strong> | One-liner rule table now specified |</p>
+<p>| MVP-A Guided Sandbox | <strong>Ready to build</strong> | Debounce behavior now specified |</p>
+<p>| MVP-B Escape Hatch | Ready to build | None |</p>
+<p>| #5 Regression Harness | Ready to build | None |</p>
+<p>| #10 Health Score Lite | Ready to build | None |</p>
+<p>| Build order | C (design) → WebWorker harness → C (finish) + A → B | Framing corrected per feedback |</p>
+<br>
+<p>---</p>
+<br>
+<h4>What Changed This Round</h4>
+<br>
+<p>| Gap | Previous state | Now |</p>
+<p>|---|---|---|</p>
+<p>| Duel Mode one-liner | "Based on input characteristics" (hand-wavy) | 6-rule decision table with concrete example |</p>
+<p>| MVP-A execution trigger | Unspecified | 300ms debounce, terminate-on-new-run, 2s timeout |</p>
+<p>| Build order framing | Slightly misleading | Corrected: C requires harness; design starts first |</p>
+<br>
+<p>No features added. No scope changed. Both flagged gaps are closed.</p></div>
+      </div>
+      <div class="agent-block critical">
+        <div class="agent-label"><span class="dot"></span> Critical PM</div>
+        <div class="agent-content"><h3>Round 5 Evaluation — Compression Algorithm Explorer</h3>
+<br>
+<h4>Scoring</h4>
+<br>
+<p>| Feature | Feasibility | User Impact | Effort (lower = harder) | Notes |</p>
+<p>|---|---|---|---|---|</p>
+<p>| MVP-C One-liner (rule table) | 9 | 8 | 9 | Switch on existing outputs; near-zero cost |</p>
+<p>| MVP-A Debounce spec | 9 | 8 | 8 | Standard pattern; terminate() is clean |</p>
+<p>| MVP-B Escape Hatch | 9 | 7 | 8 | Previously clear; no changes needed |</p>
+<p>| #5 Regression Harness | 8 | 7 | 6 | Higher complexity, but well-scoped |</p>
+<p>| #10 Health Score Lite | 8 | 7 | 7 | Solid; no gaps remaining |</p>
+<br>
+<p>---</p>
+<br>
+<h4>Fatal Flaw Check</h4>
+<br>
+<strong>MVP-C One-liner:</strong> One unresolved ambiguity — <strong>rule priority is undefined.</strong> Consider: entropy &lt; 4.2 AND ratio delta &lt; 2%. Rule 1 and Rule 5 both fire. Which wins? The spec is silent. This is not a fatal flaw — first-match-wins is the obvious engineering default — but it should be stated explicitly to prevent inconsistent behavior across implementations. A single sentence ("rules evaluate top-to-bottom; first match wins") closes this.
+<br>
+<strong>MVP-A Debounce:</strong> Minor open question: when a run is terminated mid-execution (not via 2s timeout, but via the debounce firing again), what is the metric card state? The spec defines pulse-during-inflight and "—" on timeout, but not on explicit termination + restart. In practice the pulse simply continues through the restart, which is correct behavior — but the spec doesn't say so. Again, not fatal, but worth one line.
+<br>
+<p>No features eliminated.</p>
+<br>
+<p>---</p>
+<br>
+<h4>Ranking</h4>
+<br>
+<p>1. <strong>MVP-A debounce</strong> — Unblocks the core interaction loop. Everything else depends on the sandbox working well.</p>
+<p>2. <strong>MVP-C one-liner</strong> — High value, near-zero cost. Ship with the duel mode.</p>
+<p>3. <strong>MVP-B Escape Hatch</strong> — Low risk, reduces user frustration.</p>
+<p>4. <strong>#5 Regression Harness</strong> — High leverage for power users; worth the effort.</p>
+<p>5. <strong>#10 Health Score Lite</strong> — Nice-to-have; lowest urgency.</p>
+<br>
+<p>---</p>
+<br>
+<h4>Convergence Decision</h4>
+<br>
+<p>Both flagged gaps are closed with concrete, actionable specs. The remaining open points (rule priority ordering, metric card state on mid-run termination) are implementation-level decisions, not product-level gaps — a competent engineer resolves them in five minutes without coming back to PM. The build order is corrected and the table is accurate.</p>
+<br>
+<p>This is ready to hand to engineering.</p><div class="convergence yes">&#10003; Converged</div></div>
+      </div>
+    </div>
+    <div class="summary" id="summary">
+      <h2>Pipeline Summary</h2>
+      <p>Converged after 4 round(s). The Critical PM determined the ideas were ready to move forward.</p>
+    </div>
+    <div class="final-ideas" id="final">
+      <h2>Final Ideas</h2>
+      <div class="content"><h3>Compression Algorithm Explorer — Round 5: Closing the Last Two Gaps</h3>
+<br>
+<p>Two open items. This round resolves both. No new features, no scope changes.</p>
+<br>
+<p>---</p>
+<br>
+<h4>Gap 1: Duel Mode "Why X Won" One-Liner — Rule-Based System</h4>
+<br>
+<p>The one-liner is <strong>rule-based, not ML-based.</strong> It reads three metrics already computed by the WebWorker — input entropy, compression ratio delta, and encode/decode symmetry — and selects from a small decision table. Here is the complete rule-set:</p>
+<br>
+<p>| Condition | One-liner template |</p>
+<p>|---|---|</p>
+<p>| Input entropy &lt; 4.2 bits/symbol AND A wins on ratio | "A wins: low-entropy input rewards symbol-frequency coding. Huffman thrives here." |</p>
+<p>| Input entropy &gt; 6.5 bits/symbol AND neither beats raw by &gt;5% | "Neither algorithm found much to compress — high-entropy input leaves little headroom for either approach." |</p>
+<p>| A wins on ratio but B wins on speed (encode time delta &gt; 20%) | "A compresses tighter; B is faster. Depends whether you're optimizing for size or throughput." |</p>
+<p>| B wins on ratio AND entropy is mid-range (4.2–6.5) | "B finds more structure in this input. Mid-range entropy often rewards dictionary-based approaches." |</p>
+<p>| Ratio delta &lt; 2% | "Too close to call on compression — check encode time as the tiebreaker." |</p>
+<p>| Any edge-case corpus file (e.g. already-compressed input) | "Input is nearly incompressible — both algorithms are working against the format, not with it." |</p>
+<br>
+<strong>Implementation note:</strong> The rule table is a static lookup evaluated after each WebWorker run. The metrics driving it are already computed. Engineering cost: near zero — this is a switch statement on existing outputs. The one-liner renders below the stat cards, not inline.
+<br>
+<strong>One concrete example for the spec:</strong> User pits their Huffman implementation against a run-length encoder on a BMP image corpus. Entropy reads 3.1 bits/symbol. Output: *"A wins: low-entropy input rewards symbol-frequency coding. Huffman thrives here."*
+<br>
+<strong>Edge case:</strong> If no rule fires (this should be rare given the coverage above), the fallback is: *"A edges out B — check the ratio and encode time breakdown above for details."* No silent failures.
+<br>
+<p>---</p>
+<br>
+<h4>Gap 2: MVP-A Keystroke Execution — Explicit Debounce Spec</h4>
+<br>
+<strong>Execution triggers on idle, not on keypress.</strong> The spec is:
+<br>
+<ul>
+<li>WebWorker run fires <strong>300ms after the last keystroke</strong> (standard input debounce)</li>
+<li>If a run is already in-flight when the debounce fires, the new run is queued and the in-flight run is terminated via `worker.terminate()` — no double-execution</li>
+<li>While a run is in-flight, the three live metric cards show a subtle pulse animation (not a spinner, not a loading bar — just a low-opacity pulse on the number itself)</li>
+<li>If a run exceeds <strong>2 seconds</strong>, it is terminated and the metric cards show "—" with a tooltip: *"Execution timed out — try a smaller input or check for infinite loops"*</li>
+<li>The 2-second timeout is the only hard guardrail against runaway algorithms; no other intervention</li>
+</ul>
+<br>
+</ul>
+<strong>Why 300ms:</strong> Standard for live-preview editors (VS Code, CodePen, CodeSandbox all use this range). Fast enough to feel live; slow enough to avoid hammering the WebWorker on fast typists.
+<br>
+<strong>Engineering note for the spec:</strong> The debounce lives in the main thread, not the worker. The worker is stateless — it receives a payload (code + corpus chunk), runs once, posts results back, and exits. Main thread manages all scheduling.
+<br>
+<p>---</p>
+<br>
+<h4>Updated Feature Table</h4>
+<br>
+<p>| Feature | Status | Remaining gaps |</p>
+<p>|---|---|---|</p>
+<p>| MVP-C Duel Mode | <strong>Ready to build</strong> | One-liner rule table now specified |</p>
+<p>| MVP-A Guided Sandbox | <strong>Ready to build</strong> | Debounce behavior now specified |</p>
+<p>| MVP-B Escape Hatch | Ready to build | None |</p>
+<p>| #5 Regression Harness | Ready to build | None |</p>
+<p>| #10 Health Score Lite | Ready to build | None |</p>
+<p>| Build order | C (design) → WebWorker harness → C (finish) + A → B | Framing corrected per feedback |</p>
+<br>
+<p>---</p>
+<br>
+<h4>What Changed This Round</h4>
+<br>
+<p>| Gap | Previous state | Now |</p>
+<p>|---|---|---|</p>
+<p>| Duel Mode one-liner | "Based on input characteristics" (hand-wavy) | 6-rule decision table with concrete example |</p>
+<p>| MVP-A execution trigger | Unspecified | 300ms debounce, terminate-on-new-run, 2s timeout |</p>
+<p>| Build order framing | Slightly misleading | Corrected: C requires harness; design starts first |</p>
+<br>
+<p>No features added. No scope changed. Both flagged gaps are closed.</p></div>
+    </div>
+  </main>
+</body>
+</html>
