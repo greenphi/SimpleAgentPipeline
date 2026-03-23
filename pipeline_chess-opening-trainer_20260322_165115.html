@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agent Pipeline Log</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f5f5f5; color: #222; }
+
+    header { background: #1a1a2e; color: white; padding: 24px 32px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+    header h1 { font-size: 1.2rem; font-weight: 600; margin-bottom: 4px; }
+    header .idea { font-size: 0.9rem; color: #aab; }
+
+    nav { background: #16213e; padding: 10px 32px; display: flex; gap: 12px; flex-wrap: wrap; position: sticky; top: 72px; z-index: 99; border-bottom: 1px solid #0f3460; }
+    nav a { color: #7ec8e3; font-size: 0.82rem; text-decoration: none; padding: 4px 10px; border-radius: 12px; border: 1px solid #0f3460; transition: background 0.15s; }
+    nav a:hover { background: #0f3460; }
+
+    main { max-width: 960px; margin: 32px auto; padding: 0 24px 64px; }
+
+    .round { margin-bottom: 48px; }
+    .round-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #ddd; }
+    .round-badge { background: #1a1a2e; color: white; font-size: 0.8rem; font-weight: 700; padding: 4px 12px; border-radius: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .round-header h2 { font-size: 1.1rem; color: #555; font-weight: 500; }
+
+    .agent-block { border-radius: 8px; margin-bottom: 16px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    .agent-label { padding: 10px 16px; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; display: flex; align-items: center; gap: 8px; }
+    .agent-label .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+    .agent-content { padding: 20px 24px; background: white; font-size: 0.92rem; line-height: 1.7; }
+    .agent-content h2, .agent-content h3, .agent-content h4 { margin: 16px 0 6px; color: #333; }
+    .agent-content p { margin-bottom: 10px; }
+    .agent-content ul { margin: 8px 0 12px 20px; }
+    .agent-content li { margin-bottom: 6px; }
+    .agent-content strong { color: #111; }
+    .agent-content br { display: block; margin: 4px 0; }
+    pre { background: #f0f0f0; border-radius: 4px; padding: 12px 16px; overflow-x: auto; font-size: 0.85rem; margin: 10px 0; white-space: pre-wrap; word-break: break-all; }
+
+    /* Agent colour themes */
+    .creative .agent-label  { background: #e8f4fd; color: #1565c0; }
+    .creative .agent-label .dot { background: #1565c0; }
+    .creative .agent-content { border-top: 3px solid #1565c0; }
+
+    .critical .agent-label  { background: #fce4ec; color: #ad1457; }
+    .critical .agent-label .dot { background: #ad1457; }
+    .critical .agent-content { border-top: 3px solid #ad1457; }
+
+    .spec-agent .agent-label  { background: #f3e5f5; color: #6a1b9a; }
+    .spec-agent .agent-label .dot { background: #6a1b9a; }
+    .spec-agent .agent-content { border-top: 3px solid #6a1b9a; }
+
+    .plan-agent .agent-label  { background: #e8eaf6; color: #283593; }
+    .plan-agent .agent-label .dot { background: #283593; }
+    .plan-agent .agent-content { border-top: 3px solid #283593; }
+
+    .testplan-agent .agent-label  { background: #fff3e0; color: #e65100; }
+    .testplan-agent .agent-label .dot { background: #e65100; }
+    .testplan-agent .agent-content { border-top: 3px solid #e65100; }
+
+    .qa-agent .agent-label  { background: #fff8e1; color: #f57f17; }
+    .qa-agent .agent-label .dot { background: #f57f17; }
+    .qa-agent .agent-content { border-top: 3px solid #f57f17; }
+
+    .engineer-agent .agent-label  { background: #e8f5e9; color: #1b5e20; }
+    .engineer-agent .agent-label .dot { background: #1b5e20; }
+    .engineer-agent .agent-content { border-top: 3px solid #1b5e20; }
+
+    .test-results .agent-label  { background: #f1f8e9; color: #33691e; }
+    .test-results .agent-label .dot { background: #33691e; }
+    .test-results.fail .agent-label  { background: #fbe9e7; color: #bf360c; }
+    .test-results.fail .agent-label .dot { background: #bf360c; }
+    .test-results .agent-content { border-top: 3px solid #33691e; }
+    .test-results.fail .agent-content { border-top: 3px solid #bf360c; }
+
+    .convergence { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 20px; font-size: 0.82rem; font-weight: 600; margin-top: 12px; }
+    .convergence.yes   { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+    .convergence.no    { background: #fff8e1; color: #f57f17; border: 1px solid #ffe082; }
+    .convergence.error { background: #fbe9e7; color: #bf360c; border: 1px solid #ffccbc; }
+    .convergence.pass  { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+    .convergence.fail  { background: #fbe9e7; color: #bf360c; border: 1px solid #ffccbc; }
+
+    .summary { background: white; border-radius: 8px; padding: 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); border-left: 4px solid #1a1a2e; margin-bottom: 32px; }
+    .summary h2 { font-size: 1rem; margin-bottom: 12px; color: #1a1a2e; }
+    .summary p { font-size: 0.92rem; color: #444; line-height: 1.6; }
+
+    .final-ideas { background: white; border-radius: 8px; padding: 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); border-left: 4px solid #1565c0; margin-bottom: 32px; }
+    .final-ideas h2 { font-size: 1rem; margin-bottom: 16px; color: #1565c0; }
+    .final-ideas .content { font-size: 0.92rem; line-height: 1.7; }
+    .final-ideas .content p { margin-bottom: 10px; }
+    .final-ideas .content ul { margin: 8px 0 12px 20px; }
+    .final-ideas .content li { margin-bottom: 6px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Agent Pipeline Log</h1>
+    <div class="idea">Idea: a web-based chess opening trainer</div>
+  </header>
+  <nav id="nav">
+    <a href="#final">Final Ideas</a>
+    <a href="#round-1">PM Round 1</a>
+    <a href="#round-2">PM Round 2</a>
+    <a href="#phase-spec">Spec</a>
+    <a href="#phase-plan">Plan</a>
+    <a href="#phase-testplan">Test Plan</a>
+    <a href="#phase-qa">QA</a>
+    <a href="#phase-engineer">Engineer</a>
+    <a href="#summary">Summary</a>
+  </nav>
+  <main>
+    <div class="round" id="round-1">
+      <div class="round-header">
+        <span class="round-badge">Round 1</span>
+        <h2>Ideation &amp; Evaluation</h2>
+      </div>
+      <div class="agent-block creative">
+        <div class="agent-label"><span class="dot"></span> Creative PM</div>
+        <div class="agent-content"><h2>Chess Opening Trainer — Feature Ideas</h2>
+<br>
+<p>---</p>
+<br>
+<h3>1. Opening DNA Fingerprint</h3>
+<strong>Description:</strong> Analyze a user's game history (via PGN upload or Lichess/Chess.com sync) to identify which openings they gravitate toward and which they consistently misplay. Generate a visual "DNA strand" showing their opening repertoire strengths and gaps.
+<strong>User value:</strong> Players immediately see where they're losing theory points without manually reviewing dozens of games.
+<strong>Complexity:</strong> Medium
+<br>
+<p>---</p>
+<br>
+<h3>2. Spaced Repetition Drill Mode</h3>
+<strong>Description:</strong> Apply an Anki-style SRS algorithm to opening lines, surfacing positions the user has missed or hesitated on at optimal review intervals. Each position is a flashcard — the user plays the move, gets instant feedback, and the card is scheduled accordingly.
+<strong>User value:</strong> Moves get committed to long-term memory with minimal wasted repetition.
+<strong>Complexity:</strong> Medium
+<br>
+<p>---</p>
+<br>
+<h3>3. Grandmaster Ghost Mode</h3>
+<strong>Description:</strong> Play through an opening alongside a "ghost" overlay of how a famous grandmaster (Fischer, Kasparov, Magnus) historically played it — same position, their actual game choices shown as faint arrows. Users can diverge and see where they part ways.
+<strong>User value:</strong> Provides aspirational context and makes rote drilling feel like a mentorship session.
+<strong>Complexity:</strong> High
+<br>
+<p>---</p>
+<br>
+<h3>4. Opening Story Mode</h3>
+<strong>Description:</strong> Each opening comes with a short narrative — the historical moment it was born, the rivalry that shaped it, the tournament that popularized it. Moves are revealed as chapters in the story, so learning the Sicilian feels like reading a thriller.
+<strong>User value:</strong> Transforms dry memorization into memorable storytelling, dramatically improving retention.
+<strong>Complexity:</strong> Low–Medium
+<br>
+<p>---</p>
+<br>
+<h3>5. Trap Detector &amp; Trap Setter</h3>
+<strong>Description:</strong> Highlight the sharpest traps in any opening line — positions where a natural-looking opponent move leads to a quick loss. Users can practice springing traps on a bot or studying how to sidestep them when playing Black.
+<strong>User value:</strong> Gives club-level players immediately actionable "weapons" they can use next weekend.
+<strong>Complexity:</strong> Medium
+<br>
+<p>---</p>
+<br>
+<h3>6. Opponent Style Simulator</h3>
+<strong>Description:</strong> Instead of a static engine, pair the opening trainer with bots that mimic common amateur playing styles — the "e4 e5 beginner," the "London System loyalist," the "hyper-aggressive Sicilian attacker." Users practice openings against realistic human patterns, not perfect computer play.
+<strong>User value:</strong> Bridges the gap between knowing theory and applying it against real opponents.
+<strong>Complexity:</strong> High
+<br>
+<p>---</p>
+<br>
+<h3>7. Opening Report Card</h3>
+<strong>Description:</strong> After each practice session, generate a one-page report card grading accuracy, speed of recall, and depth reached in each line. Include a trend chart showing improvement over the past 30 days and a single "focus line" recommendation for next session.
+<strong>User value:</strong> Creates a satisfying feedback loop and a clear next step, reducing decision fatigue.
+<strong>Complexity:</strong> Low
+<br>
+<p>---</p>
+<br>
+<p>*Round 1 — ready for feedback on direction, depth, or target audience shifts.*</p></div>
+      </div>
+      <div class="agent-block critical">
+        <div class="agent-label"><span class="dot"></span> Critical PM</div>
+        <div class="agent-content"><h3>Critical PM Evaluation: Chess Opening Trainer</h3>
+<br>
+<p>---</p>
+<br>
+<h4>Scoring</h4>
+<br>
+<p>| # | Feature | Feasibility | User Impact | Effort (raw) | Notes |</p>
+<p>|---|---------|------------|------------|-------------|-------|</p>
+<p>| 1 | Opening DNA Fingerprint | 6 | 8 | 7 | API integrations + viz add risk |</p>
+<p>| 2 | Spaced Repetition Drill Mode | 9 | 9 | 5 | Proven category, table stakes |</p>
+<p>| 3 | Grandmaster Ghost Mode | 5 | 7 | 8 | Licensing + UX complexity |</p>
+<p>| 4 | Opening Story Mode | 9 | 7 | 4 | Content quality is the only real risk |</p>
+<p>| 5 | Trap Detector &amp; Trap Setter | 8 | 8 | 5 | Clear hook for club players |</p>
+<p>| 6 | Opponent Style Simulator | 4 | 8 | 9 | <strong>Fatal flaw — see below</strong> |</p>
+<p>| 7 | Opening Report Card | 9 | 7 | 2 | Obvious win, ship early |</p>
+<br>
+<p>---</p>
+<br>
+<h4>Fatal Flaw: Eliminating #6 (Opponent Style Simulator)</h4>
+<br>
+<p>This idea has a near-fatal execution risk. The promise — bots that *feel* like authentic human opponents — requires either ML models trained on enormous amateur game corpora, or heuristics convincing enough that users suspend disbelief. Neither is achievable at "High" complexity; this is an order of magnitude harder.</p>
+<br>
+<p>When style simulators fall short (and they almost always do), they don't just fail quietly — they actively undermine trust in the whole product. A user who notices the "aggressive Sicilian bot" makes computer-like defensive moves will discount every other feature. Cut it.</p>
+<br>
+<strong>Grandmaster Ghost Mode (#3)</strong> is borderline. Game database licensing is a real legal surface, and rendering ghost-arrow overlays cleanly on a board is deceptively tricky UX. It also skews toward intermediate+ players while features 2, 4, 5, and 7 serve a broader range. Defer to a later phase, not eliminate.
+<br>
+<p>---</p>
+<br>
+<h4>Ranking (Remaining 6 Ideas)</h4>
+<br>
+<strong>Tier 1 — Ship First (Core Loop)</strong>
+<p>1. <strong>Spaced Repetition Drill Mode</strong> — This *is* the product. Without it you're a static opening reference, not a trainer. Chessable proved the market; the opportunity is to do it better.</p>
+<p>2. <strong>Opening Report Card</strong> — Minimal effort, maximum retention. It completes the feedback loop for every session. No excuse not to have this at launch.</p>
+<br>
+<strong>Tier 2 — Ship Second (Differentiation)</strong>
+<p>3. <strong>Trap Detector &amp; Trap Setter</strong> — Best acquisition feature on the list. "Learn traps to win next weekend" is a concrete, testable promise. Drives word-of-mouth among club players.</p>
+<p>4. <strong>Opening DNA Fingerprint</strong> — Personalization creates stickiness. The "DNA strand" visual is gimmicky; call it a Repertoire Map and it's stronger. Lichess API integration is well-documented and free.</p>
+<br>
+<strong>Tier 3 — Later (Engagement/Retention Depth)</strong>
+<p>5. <strong>Opening Story Mode</strong> — Genuinely differentiated. Competitors don't do this. But it's only as good as the writing — underfund content and it dies on arrival.</p>
+<p>6. <strong>Grandmaster Ghost Mode</strong> — High ceiling, high risk. Worth revisiting once there's a user base to justify the licensing cost.</p>
+<br>
+<p>---</p>
+<br>
+<h4>Convergence Decision</h4>
+<br>
+<p>The ideas are <strong>not quite ready to converge</strong>. Two gaps need addressing before committing to a roadmap:</p>
+<br>
+<p>1. <strong>No defined target user.</strong> Features 2 and 7 serve beginners; features 1 and 5 serve club players (~1200–1800 Elo); feature 3 serves intermediate+ players. These require different content investments and go-to-market angles. The list needs a primary persona before sequencing makes sense.</p>
+<br>
+<p>2. <strong>No clear MVP boundary.</strong> Tier 1 above is the right core, but the brief doesn't address the minimum viable content library (how many openings? lines per opening?) needed to make SRS useful at all. Without that, the engineering plan is underspecified.</p>
+<br>
+<p>One more round focused on: (a) locking a primary user persona, (b) defining the opening content scope, and (c) validating whether Trap Detector or DNA Fingerprint is the stronger acquisition hook for that persona.</p><div class="convergence no">&#8635; Needs refinement &mdash; Strong ideas exist (SRS + Report Card as core, Traps + DNA as differentiation), but the list lacks a locked primary persona and content scope definition — without those, sequencing is arbitrary and the MVP boundary is unclear. One refinement round needed to resolve persona and opening library depth.</div></div>
+      </div>
+    </div>
+    <div class="round" id="round-2">
+      <div class="round-header">
+        <span class="round-badge">Round 2</span>
+        <h2>Ideation &amp; Evaluation</h2>
+      </div>
+      <div class="agent-block creative">
+        <div class="agent-label"><span class="dot"></span> Creative PM</div>
+        <div class="agent-content"><h2>Chess Opening Trainer — Round 3: Persona Lock &amp; Scope Definition</h2>
+<br>
+<p>---</p>
+<br>
+<h3>Addressing the Two Convergence Gaps First</h3>
+<br>
+<h4>Primary Persona: The Aspiring Club Player (800–1600 Elo)</h4>
+<br>
+<strong>Profile:</strong> Plays 3–5 games per week online (Lichess/Chess.com), occasionally OTB. Has a vague "opening repertoire" cobbled together from YouTube videos. Loses games in the opening not from missing deep theory but from forgetting move 6, walking into a well-known trap, or entering a pawn structure they don't understand. Studies in 20–30 minute sessions, usually on mobile.
+<br>
+<strong>Why this persona over beginners or advanced players:</strong>
+<ul>
+<li>Large addressable pool (this is the majority of active online chess players)</li>
+<li>High pain: they know enough to be frustrated by opening mistakes, not enough to self-study efficiently</li>
+<li>Trap Detector and SRS deliver *immediate* wins — this persona sees value in session one</li>
+<li>Chessable's weakness here is UX complexity; there's a clear opening</li>
+</ul>
+<br>
+</ul>
+<h4>MVP Content Scope</h4>
+<br>
+<strong>10 openings × 4 main lines × ~8 positions per line = ~320 training positions.</strong>
+<br>
+<p>The 10 openings (by popularity at 800–1600 Elo): Italian, Ruy López, Sicilian (Najdorf + Dragon), French, Caro-Kann, London, King's Indian, Queen's Gambit, Scandinavian, Pirc. This is achievable with a small content team and gives White *and* Black coverage. Each line goes 8–10 moves deep — enough to get past the opening without encyclopedic depth.</p>
+<br>
+<h4>Acquisition Hook: Trap Detector Wins</h4>
+<br>
+<p>For the 800–1600 persona, Trap Detector is the stronger hook. "Learn 3 traps you can use this weekend" is a concrete, social, immediately rewarding promise. DNA/Repertoire Map requires uploading game history — friction before first value. <strong>Lead with Trap Detector in marketing, build SRS as the product engine underneath.</strong></p>
+<br>
+<p>---</p>
+<br>
+<h3>Refined Feature Set (Persona-Aligned)</h3>
+<br>
+<p>---</p>
+<br>
+<h4>1. Spaced Repetition Drill Mode *(Retained — Core Loop)*</h4>
+<strong>Description:</strong> Anki-style SRS applied to the 320 MVP positions. User plays the move; the card is scheduled based on response speed and accuracy. Positions missed more than twice surface a hint layer — a highlighted square, not the full answer — before revealing. Mobile-first: a full session takes under 15 minutes.
+<strong>User value:</strong> The opening becomes automatic. Club players stop spending mental energy on move 6 and start thinking about the middlegame.
+<strong>Complexity:</strong> Medium
+<br>
+<p>---</p>
+<br>
+<h4>2. Opening Report Card *(Retained — Feedback Loop)*</h4>
+<strong>Description:</strong> End-of-session summary: accuracy %, average recall speed, deepest line reached, and one recommended focus line for next session. After 30 days, a trend sparkline shows streak and improvement curve. Shareable as an image.
+<strong>User value:</strong> Closes the feedback loop every session. The single "focus next" recommendation eliminates decision fatigue.
+<strong>Complexity:</strong> Low
+<br>
+<p>---</p>
+<br>
+<h4>3. Trap Detector &amp; Trap Setter *(Retained — Acquisition Hook)*</h4>
+<strong>Description:</strong> Every opening line in the MVP library is tagged with its sharpest trap positions. "Trap Mode" is a standalone flow: pick an opening, play through three positions where a common amateur mistake leads to a quick loss, and practice springing the same trap on a puzzle bot. Tagged with approximate Elo range where the trap lands.
+<strong>User value:</strong> Immediate, concrete weapon for the next game. "I learned the Stafford Gambit trap in 10 minutes and won with it tonight" is word-of-mouth gold.
+<strong>Complexity:</strong> Medium
+<br>
+<p>---</p>
+<br>
+<h4>4. Repertoire Map *(Refined from DNA Fingerprint)*</h4>
+<strong>Description:</strong> After 10+ drill sessions (no upload required — built from in-app behavior), generate a visual map of the user's opening coverage: lines drilled, accuracy by line, and obvious gaps. Clicking a gap drops the user directly into that line's SRS queue. No gimmicky "DNA" framing — this is a navigator, not a novelty.
+<strong>User value:</strong> Replaces the anxiety of "what should I study?" with a clear, personalized answer grounded in actual practice data.
+<strong>Complexity:</strong> Medium *(reduced: no external API dependency in v1 — built from first-party drill data)*
+<br>
+<p>---</p>
+<br>
+<h4>5. *(New)* Blunder Benchmark</h4>
+<strong>Description:</strong> For each opening line, surface the three moves where players at the user's self-reported Elo most commonly go wrong — pulled from aggregated anonymized session data or, at launch, curated from published game databases. Presented as a "96% of players at 1200 play Nc6 here — here's why it loses." Users drill specifically on these high-error positions first.
+<strong>User value:</strong> Targets study time at the exact mistakes this persona is statistically likely to make, not the mistakes grandmasters make.
+<strong>Complexity:</strong> Low–Medium *(curation-heavy at launch; data-driven post-scale)*
+<br>
+<p>---</p>
+<br>
+<h4>6. *(New)* Pre-Game Warm-Up</h4>
+<strong>Description:</strong> A 5-minute mode triggered before a game: user inputs "I'm playing White against a French player" (or auto-detected from Lichess account), and the app surfaces a rapid-fire 10-position drill of the most critical French lines. No new material — pure activation of what they've already learned.
+<strong>User value:</strong> Bridges the gap between practice and performance. Primes muscle memory immediately before it's needed, not days earlier.
+<strong>Complexity:</strong> Low *(built on existing SRS data + simple filtering logic)*
+<br>
+<p>---</p>
+<br>
+<h4>Deferred (Not Cut)</h4>
+<br>
+<ul>
+<li><strong>Opening Story Mode</strong> — Differentiated and worth building, but content quality is the risk. Commission 3 pilot stories (Sicilian, King's Indian, London) before greenlighting the full library.</li>
+<li><strong>Grandmaster Ghost Mode</strong> — Revisit at 10k users. Licensing cost becomes justifiable; user base to absorb the UX learning curve exists.</li>
+</ul>
+<br>
+<p>---</p>
+<br>
+</ul>
+<h3>Convergence Recommendation</h3>
+<br>
+<p>The list is <strong>ready to converge.</strong> Persona is locked (aspiring club player, 800–1600), content scope is defined (10 openings, ~320 positions), and the feature sequence has a clear logic:</p>
+<br>
+<strong>Launch:</strong> SRS Drill Mode + Opening Report Card + Trap Detector
+<strong>Month 2:</strong> Blunder Benchmark + Pre-Game Warm-Up
+<strong>Month 4:</strong> Repertoire Map
+<strong>Phase 2:</strong> Story Mode pilots → Ghost Mode
+<br>
+<p>The only remaining open question is build-vs-license for the chess board UI (Lichess's open-source board vs. a custom renderer) — an engineering decision, not a product one.</p>
+<br>
+<p>```json</p>
+<p>{"converged": true, "primary_persona": "Aspiring club player, 800–1600 Elo", "mvp_content_scope": "10 openings × 4 lines × 8 positions = ~320 training positions", "launch_tier": ["SRS Drill Mode", "Opening Report Card", "Trap Detector"]}</p>
+<p>```</p></div>
+      </div>
+      <div class="agent-block critical">
+        <div class="agent-label"><span class="dot"></span> Critical PM</div>
+        <div class="agent-content"><h3>Critical PM Evaluation: Chess Opening Trainer Round 3</h3>
+<br>
+<p>---</p>
+<br>
+<h4>Persona &amp; Scope Assessment</h4>
+<br>
+<p>The persona lock is solid. 800–1600 is the right target — large pool, clear pain, monetizable frustration. The 320-position MVP scope is credible but I want to flag a hidden risk: <strong>content quality gates the entire product</strong>. SRS on bad or incomplete content is worse than no SRS. Before committing to 10 openings, confirm who owns curation and what the quality bar is.</p>
+<br>
+<p>---</p>
+<br>
+<h4>Feature Scoring</h4>
+<br>
+<p>| Feature | Feasibility | User Impact | Effort | Notes |</p>
+<p>|---|---|---|---|---|</p>
+<p>| SRS Drill Mode | 8 | 9 | 6 | Proven mechanic, but mobile board UX is the hard part |</p>
+<p>| Opening Report Card | 9 | 7 | 3 | Easy win — mostly data aggregation + display |</p>
+<p>| Trap Detector &amp; Setter | 7 | 9 | 5 | High virality ceiling; puzzle bot scoping is the risk |</p>
+<p>| Repertoire Map | 7 | 8 | 5 | Good that external API dependency is removed |</p>
+<p>| Blunder Benchmark | 6 | 8 | 7 | Data is the bottleneck — "curation-heavy at launch" is a real cost |</p>
+<p>| Pre-Game Warm-Up | 9 | 8 | 2 | Highest ROI feature on the list — underrated |</p>
+<br>
+<p>---</p>
+<br>
+<h4>Fatal Flaw Check</h4>
+<br>
+<strong>No fatal flaws, but two conditional flags:</strong>
+<br>
+<strong>Blunder Benchmark — watch the data problem.</strong> "Aggregated anonymized session data" doesn't exist at launch. You're launching with curated data, which means a content team decision disguised as a product feature. The value prop ("96% of 1200-Elo players make this mistake") requires *your* player data to be credible, not published game databases filtered by Elo. At launch this is essentially hand-labeled content. That's fine — just name it honestly in the roadmap so engineering doesn't over-build the data pipeline prematurely.
+<br>
+<strong>Trap Setter puzzle bot — scope it tightly.</strong> "Practice springing the trap on a puzzle bot" is doing a lot of work in one sentence. A full puzzle bot is a non-trivial build. If this means "play the winning continuation from the trap position against a static response tree," that's low effort. If it means "dynamic bot that plays realistic defense," that's a different product. Pin this down before Month 1 ends.
+<br>
+<p>---</p>
+<br>
+<h4>Ranking (Launch Priority Order)</h4>
+<br>
+<p>1. <strong>Pre-Game Warm-Up</strong> — Highest effort-to-value ratio on the board. Costs almost nothing to build; directly bridges the practice-performance gap that is the product's core promise. Should be in launch, not Month 2.</p>
+<p>2. <strong>SRS Drill Mode</strong> — Non-negotiable core. The whole product fails without this working well on mobile.</p>
+<p>3. <strong>Trap Detector</strong> — Acquisition engine. Correct call to lead marketing here.</p>
+<p>4. <strong>Opening Report Card</strong> — Retention mechanism. Low effort, keeps users coming back.</p>
+<p>5. <strong>Blunder Benchmark</strong> — Strong concept, but sequencing it to Month 2 is correct given data dependency.</p>
+<p>6. <strong>Repertoire Map</strong> — Month 4 is right. Requires real usage data to be meaningful, not just functional.</p>
+<br>
+<p>---</p>
+<br>
+<h4>One Sequencing Challenge</h4>
+<br>
+<p>Pre-Game Warm-Up is listed as Month 2, but it's the feature most likely to trigger daily active use. Club players play games several times a week — if Pre-Game Warm-Up becomes a habit, you get 3–5 sessions per week instead of 1–2. That retention multiplier matters for Month 1 numbers. Strongly recommend pulling it into launch.</p>
+<br>
+<p>---</p>
+<br>
+<h4>Convergence Decision</h4>
+<br>
+<p>The product direction is sound. Persona is locked, scope is defined, and the feature logic is coherent. The roadmap is buildable. The two items above (Blunder Benchmark data source transparency, Trap Setter scope pin) are execution risks, not strategic ones.</p>
+<br>
+<p>One open question to resolve before sprint planning: <strong>who owns content?</strong> The 320-position library, trap tagging, blunder curation — this is the product's moat and its biggest non-engineering cost. If that ownership isn't named, the roadmap will slip.</p><div class="convergence yes">&#10003; Converged</div></div>
+      </div>
+    </div>
+    <div class="final-ideas" id="final">
+      <h2>Final Ideas (from PM Loop)</h2>
+      <div class="content"><h2>Chess Opening Trainer — Round 3: Persona Lock &amp; Scope Definition</h2>
+<br>
+<p>---</p>
+<br>
+<h3>Addressing the Two Convergence Gaps First</h3>
+<br>
+<h4>Primary Persona: The Aspiring Club Player (800–1600 Elo)</h4>
+<br>
+<strong>Profile:</strong> Plays 3–5 games per week online (Lichess/Chess.com), occasionally OTB. Has a vague "opening repertoire" cobbled together from YouTube videos. Loses games in the opening not from missing deep theory but from forgetting move 6, walking into a well-known trap, or entering a pawn structure they don't understand. Studies in 20–30 minute sessions, usually on mobile.
+<br>
+<strong>Why this persona over beginners or advanced players:</strong>
+<ul>
+<li>Large addressable pool (this is the majority of active online chess players)</li>
+<li>High pain: they know enough to be frustrated by opening mistakes, not enough to self-study efficiently</li>
+<li>Trap Detector and SRS deliver *immediate* wins — this persona sees value in session one</li>
+<li>Chessable's weakness here is UX complexity; there's a clear opening</li>
+</ul>
+<br>
+</ul>
+<h4>MVP Content Scope</h4>
+<br>
+<strong>10 openings × 4 main lines × ~8 positions per line = ~320 training positions.</strong>
+<br>
+<p>The 10 openings (by popularity at 800–1600 Elo): Italian, Ruy López, Sicilian (Najdorf + Dragon), French, Caro-Kann, London, King's Indian, Queen's Gambit, Scandinavian, Pirc. This is achievable with a small content team and gives White *and* Black coverage. Each line goes 8–10 moves deep — enough to get past the opening without encyclopedic depth.</p>
+<br>
+<h4>Acquisition Hook: Trap Detector Wins</h4>
+<br>
+<p>For the 800–1600 persona, Trap Detector is the stronger hook. "Learn 3 traps you can use this weekend" is a concrete, social, immediately rewarding promise. DNA/Repertoire Map requires uploading game history — friction before first value. <strong>Lead with Trap Detector in marketing, build SRS as the product engine underneath.</strong></p>
+<br>
+<p>---</p>
+<br>
+<h3>Refined Feature Set (Persona-Aligned)</h3>
+<br>
+<p>---</p>
+<br>
+<h4>1. Spaced Repetition Drill Mode *(Retained — Core Loop)*</h4>
+<strong>Description:</strong> Anki-style SRS applied to the 320 MVP positions. User plays the move; the card is scheduled based on response speed and accuracy. Positions missed more than twice surface a hint layer — a highlighted square, not the full answer — before revealing. Mobile-first: a full session takes under 15 minutes.
+<strong>User value:</strong> The opening becomes automatic. Club players stop spending mental energy on move 6 and start thinking about the middlegame.
+<strong>Complexity:</strong> Medium
+<br>
+<p>---</p>
+<br>
+<h4>2. Opening Report Card *(Retained — Feedback Loop)*</h4>
+<strong>Description:</strong> End-of-session summary: accuracy %, average recall speed, deepest line reached, and one recommended focus line for next session. After 30 days, a trend sparkline shows streak and improvement curve. Shareable as an image.
+<strong>User value:</strong> Closes the feedback loop every session. The single "focus next" recommendation eliminates decision fatigue.
+<strong>Complexity:</strong> Low
+<br>
+<p>---</p>
+<br>
+<h4>3. Trap Detector &amp; Trap Setter *(Retained — Acquisition Hook)*</h4>
+<strong>Description:</strong> Every opening line in the MVP library is tagged with its sharpest trap positions. "Trap Mode" is a standalone flow: pick an opening, play through three positions where a common amateur mistake leads to a quick loss, and practice springing the same trap on a puzzle bot. Tagged with approximate Elo range where the trap lands.
+<strong>User value:</strong> Immediate, concrete weapon for the next game. "I learned the Stafford Gambit trap in 10 minutes and won with it tonight" is word-of-mouth gold.
+<strong>Complexity:</strong> Medium
+<br>
+<p>---</p>
+<br>
+<h4>4. Repertoire Map *(Refined from DNA Fingerprint)*</h4>
+<strong>Description:</strong> After 10+ drill sessions (no upload required — built from in-app behavior), generate a visual map of the user's opening coverage: lines drilled, accuracy by line, and obvious gaps. Clicking a gap drops the user directly into that line's SRS queue. No gimmicky "DNA" framing — this is a navigator, not a novelty.
+<strong>User value:</strong> Replaces the anxiety of "what should I study?" with a clear, personalized answer grounded in actual practice data.
+<strong>Complexity:</strong> Medium *(reduced: no external API dependency in v1 — built from first-party drill data)*
+<br>
+<p>---</p>
+<br>
+<h4>5. *(New)* Blunder Benchmark</h4>
+<strong>Description:</strong> For each opening line, surface the three moves where players at the user's self-reported Elo most commonly go wrong — pulled from aggregated anonymized session data or, at launch, curated from published game databases. Presented as a "96% of players at 1200 play Nc6 here — here's why it loses." Users drill specifically on these high-error positions first.
+<strong>User value:</strong> Targets study time at the exact mistakes this persona is statistically likely to make, not the mistakes grandmasters make.
+<strong>Complexity:</strong> Low–Medium *(curation-heavy at launch; data-driven post-scale)*
+<br>
+<p>---</p>
+<br>
+<h4>6. *(New)* Pre-Game Warm-Up</h4>
+<strong>Description:</strong> A 5-minute mode triggered before a game: user inputs "I'm playing White against a French player" (or auto-detected from Lichess account), and the app surfaces a rapid-fire 10-position drill of the most critical French lines. No new material — pure activation of what they've already learned.
+<strong>User value:</strong> Bridges the gap between practice and performance. Primes muscle memory immediately before it's needed, not days earlier.
+<strong>Complexity:</strong> Low *(built on existing SRS data + simple filtering logic)*
+<br>
+<p>---</p>
+<br>
+<h4>Deferred (Not Cut)</h4>
+<br>
+<ul>
+<li><strong>Opening Story Mode</strong> — Differentiated and worth building, but content quality is the risk. Commission 3 pilot stories (Sicilian, King's Indian, London) before greenlighting the full library.</li>
+<li><strong>Grandmaster Ghost Mode</strong> — Revisit at 10k users. Licensing cost becomes justifiable; user base to absorb the UX learning curve exists.</li>
+</ul>
+<br>
+<p>---</p>
+<br>
+</ul>
+<h3>Convergence Recommendation</h3>
+<br>
+<p>The list is <strong>ready to converge.</strong> Persona is locked (aspiring club player, 800–1600), content scope is defined (10 openings, ~320 positions), and the feature sequence has a clear logic:</p>
+<br>
+<strong>Launch:</strong> SRS Drill Mode + Opening Report Card + Trap Detector
+<strong>Month 2:</strong> Blunder Benchmark + Pre-Game Warm-Up
+<strong>Month 4:</strong> Repertoire Map
+<strong>Phase 2:</strong> Story Mode pilots → Ghost Mode
+<br>
+<p>The only remaining open question is build-vs-license for the chess board UI (Lichess's open-source board vs. a custom renderer) — an engineering decision, not a product one.</p>
+<br>
+<p>```json</p>
+<p>{"converged": true, "primary_persona": "Aspiring club player, 800–1600 Elo", "mvp_content_scope": "10 openings × 4 lines × 8 positions = ~320 training positions", "launch_tier": ["SRS Drill Mode", "Opening Report Card", "Trap Detector"]}</p>
+<p>```</p></div>
+    </div>
+    <div class="round" id="phase-spec">
+      <div class="round-header">
+        <span class="round-badge">Spec Agent</span>
+        <h2>Project Specification</h2>
+      </div>
+      <div class="agent-block spec-agent">
+        <div class="agent-label"><span class="dot"></span> Spec Agent</div>
+        <div class="agent-content"><p>The write was blocked pending your approval. Once you grant it, the file will be created at `/Users/jamesg/Projects/SimpleAgentPipeline/chess-opening-trainer-spec.md`.</p>
+<br>
+<p>Here's a summary of what the spec covers:</p>
+<br>
+<strong>Structure (11 sections):</strong>
+<br>
+<p>1. <strong>Project Overview</strong> — positioning against Chessable, core value proposition</p>
+<p>2. <strong>Goals &amp; Success Metrics</strong> — concrete targets (Day-7 retention ≥ 40%, median session 10–15 min, NPS ≥ 35, etc.)</p>
+<p>3. <strong>Target Users</strong> — primary (800–1600 club player) and secondary (returning player) personas, with explicit out-of-scope personas (beginners, advanced)</p>
+<p>4. <strong>Content Scope</strong> — the 10 openings tabulated by color and rationale, content structure (320 positions), trap tag requirements</p>
+<p>5. <strong>MVP Features</strong> — three features fully detailed: SRS algorithm with exact interval tables, hint system behavior, session construction logic, Report Card fields and sparkline trigger, Trap Detector/Setter flow and library requirements</p>
+<p>6. <strong>Post-MVP Features</strong> — Blunder Benchmark, Pre-Game Warm-Up, Repertoire Map (with data model), Story Mode and Ghost Mode (deferred with stated prerequisites)</p>
+<p>7. <strong>User Stories</strong> — 13 stories across all three MVP features, each with explicit acceptance criteria</p>
+<p>8. <strong>Functional Requirements</strong> — 7 categories (library, SRS engine, board, report card, trap mode, accounts, persistence) with numbered sub-requirements</p>
+<p>9. <strong>Non-Functional Requirements</strong> — performance (with specific Lighthouse targets), security (auth, transport, rate limiting, privacy), accessibility (WCAG 2.1 AA, ARIA, keyboard nav), compatibility, reliability</p>
+<p>10. <strong>Out of Scope</strong> — explicit exclusions across content, features, analytics, and infrastructure</p>
+<p>11. <strong>Open Questions</strong> — 5 unresolved decisions with owners and deadlines</p></div>
+      </div>
+    </div>
+    <div class="round" id="phase-plan">
+      <div class="round-header">
+        <span class="round-badge">Plan Agent</span>
+        <h2>Implementation Plan</h2>
+      </div>
+      <div class="agent-block plan-agent">
+        <div class="agent-label"><span class="dot"></span> Plan Agent</div>
+        <div class="agent-content"><p>The plan is ready. Here's a summary of the key decisions, pending your approval to write the file:</p>
+<br>
+<p>---</p>
+<br>
+<strong>Tech Stack:</strong>
+<ul>
+<li><strong>Frontend:</strong> React 18 + TypeScript + Vite, `react-chessboard` + `chess.js`, Zustand (session state), TanStack Query (server state), Tailwind CSS, Recharts (sparklines), Framer Motion</li>
+<li><strong>Backend:</strong> Fastify 4 + TypeScript, Drizzle ORM on PostgreSQL 16, Redis (refresh tokens + rate-limit counters), Zod schemas shared between packages</li>
+<li><strong>Testing:</strong> Vitest (unit/integration on both api and web), Playwright (E2E)</li>
+<li><strong>Monorepo:</strong> pnpm workspaces, `packages/shared`, `packages/api`, `packages/web`</li>
+</ul>
+<br>
+</ul>
+<strong>Schema highlights:</strong> 8 tables — `users`, `openings`, `positions` (tree), `cards` (one per user×position), `sessions`, `session_items`, `trap_encounters`. Refresh tokens live in Redis (key `rt:&lt;userId&gt;:&lt;tokenId&gt;`, TTL 30d).
+<br>
+<strong>SRS algorithm:</strong> SM-2 variant in a pure `srs.ts` module (no I/O). Learning steps: 10 min → 1 day; review intervals from 3d → 8d → 21d → ease-factor-scaled. Ease starts at 2.5, ±0.15/−0.20 on correct/hint/incorrect, floored at 1.3.
+<br>
+<strong>6 implementation phases</strong> (18 days), with Phase 4 (Report Card) and Phase 5 (Trap Mode) independent and parallelisable after Phase 3.
+<br>
+<strong>`run_tests.sh`:</strong> spins up a test postgres (port 5433) + redis (port 6380) via `docker-compose.test.yml`, runs migrations + seed, then `pnpm --filter shared/api/web test --run`, then Playwright E2E, then tears down.
+<br>
+<p>Grant the write permission and the file will be saved to `chess-opening-trainer_20260322_165115/PLAN.md`.</p></div>
+      </div>
+    </div>
+    <div class="round" id="phase-testplan">
+      <div class="round-header">
+        <span class="round-badge">Test Plan Agent</span>
+        <h2>Testing Plan</h2>
+      </div>
+      <div class="agent-block testplan-agent">
+        <div class="agent-label"><span class="dot"></span> Test Plan Agent</div>
+        <div class="agent-content"><p>The write needs your approval to save `TESTPLAN.md` to `chess-opening-trainer_20260322_165115/`. Once you grant it, here's a summary of what the plan covers:</p>
+<br>
+<p>---</p>
+<br>
+<strong>Structure (13 sections):</strong>
+<br>
+<p>1. <strong>Philosophy &amp; Approach</strong> — pyramid model (unit → integration → E2E), no DB mocking in integration tests, pure modules first, accessibility as a first-class test concern</p>
+<p>2. <strong>Test Runner Command</strong> — exact `run_tests.sh` script spinning up Docker (postgres:5433, redis:6380), migrations, seed, then `pnpm --filter shared/api/web test --run`, then Playwright, then teardown</p>
+<p>3. <strong>Directory &amp; File Map</strong> — every test file named and placed to match PLAN.md's structure (`packages/shared/api/web/src/<strong>tests</strong>/`, `e2e/tests/`)</p>
+<p>4. <strong>SRS Drill Engine</strong> — 13 unit tests for `nextInterval` (learning steps, graduation, review, ease floor/ceiling, lapse), 8 tests for `buildSession`, service unit tests, 11 integration route tests, 10 component tests for `DrillSession` + `HintButton`</p>
+<p>5. <strong>Report Card</strong> — 11 unit tests for `computeReportCard` (accuracy, streaks, sparkline trigger, mastery, hardest position), 5 route tests, component + hook tests</p>
+<p>6. <strong>Trap Detector/Setter</strong> — session builder unit tests, service unit tests (encounters, stats), 8 route tests, 9 component tests</p>
+<p>7. <strong>Authentication</strong> — 14 integration tests covering register, login, refresh, logout, JWT attacks, rate limiting; 6 E2E tests</p>
+<p>8. <strong>Database Schema</strong> — constraint and FK tests against real DB, migration idempotency</p>
+<p>9. <strong>Edge Cases Catalogue</strong> — SRS engine edge cases, UI race conditions, report card with 0/1 data points, trap mode with 0 traps, JWT `alg:none` attack, SQL injection</p>
+<p>10. <strong>Accessibility</strong> — axe-core scans in every E2E spec, aria-live move announcements, focus trapping, color-not-sole-indicator requirement</p>
+<p>11. <strong>Performance</strong> — Lighthouse targets (≥90), API p95 &lt; 200ms, bundle &lt; 250kB gzipped</p>
+<p>12. <strong>Test Data &amp; Fixtures</strong> — exact seed data for test user, 2 openings, 20 cards in mixed states, 4 traps, 2 completed sessions</p>
+<p>13. <strong>CI Configuration Notes</strong> — Node 20, Docker requirement, headless Chromium, clean DB per run</p></div>
+      </div>
+    </div>
+    <div class="round" id="phase-qa">
+      <div class="round-header">
+        <span class="round-badge">QA Agent</span>
+        <h2>Test Implementation</h2>
+      </div>
+      <div class="agent-block qa-agent">
+        <div class="agent-label"><span class="dot"></span> QA Agent</div>
+        <div class="agent-content"><p>All 30 files are in place and look correct. Here's what was created:</p>
+<br>
+<p>---</p>
+<br>
+<h3>Test Suite — 30 files created</h3>
+<br>
+<h4>Structure</h4>
+<p>```</p>
+<p>chess-opening-trainer_20260322_165115/</p>
+<p>├── run_tests.sh                          ← executable, exits 0/non-0</p>
+<p>├── docker-compose.test.yml               ← postgres:5433, redis:6380</p>
+<p>├── pnpm-workspace.yaml</p>
+<p>├── package.json</p>
+<p>├── packages/</p>
+<p>│   ├── shared/</p>
+<p>│   │   ├── vitest.config.ts</p>
+<p>│   │   └── src/<strong>tests</strong>/</p>
+<p>│   │       └── srs.test.ts              ← 21 tests (13 nextInterval + 8 buildSession)</p>
+<p>│   ├── api/</p>
+<p>│   │   ├── vitest.config.ts</p>
+<p>│   │   └── src/<strong>tests</strong>/</p>
+<p>│   │       ├── setup.ts                 ← buildTestApp(), truncateTables()</p>
+<p>│   │       ├── fixtures.ts              ← seed data: user, openings, 20 mixed cards, 4 traps</p>
+<p>│   │       ├── auth.routes.test.ts      ← 14 tests (JWT alg:none, rate-limit, all CRUD flows)</p>
+<p>│   │       ├── drill.routes.test.ts     ← 11 tests</p>
+<p>│   │       ├── reportCard.service.test.ts ← 11 tests (accuracy, streaks, sparkline, mastery)</p>
+<p>│   │       ├── reportCard.routes.test.ts  ← 5 tests</p>
+<p>│   │       ├── trap.service.test.ts     ← 8 tests</p>
+<p>│   │       ├── trap.routes.test.ts      ← 8 tests</p>
+<p>│   │       └── schema.test.ts           ← 8 DB constraint + FK + migration tests</p>
+<p>│   └── web/</p>
+<p>│       ├── vitest.config.ts</p>
+<p>│       └── src/<strong>tests</strong>/</p>
+<p>│           ├── setup.ts                 ← jest-dom, matchMedia/ResizeObserver mocks</p>
+<p>│           ├── DrillSession.test.tsx    ← 10 tests</p>
+<p>│           ├── HintButton.test.tsx      ← 5 tests</p>
+<p>│           ├── ReportCard.test.tsx      ← 7 tests</p>
+<p>│           └── TrapMode.test.tsx        ← 9 tests</p>
+<p>└── e2e/</p>
+<p>    ├── playwright.config.ts</p>
+<p>    └── tests/</p>
+<p>        ├── auth.spec.ts                 ← 6 E2E tests + axe scans</p>
+<p>        ├── drill.spec.ts                ← 5 E2E tests + axe scans + aria-live</p>
+<p>        └── accessibility.spec.ts        ← 9 a11y tests (axe, focus trap, aria labels)</p>
+<p>```</p>
+<br>
+<h4>Key design decisions</h4>
+<ul>
+<li><strong>No DB mocking in integration tests</strong> — api tests hit real postgres via `buildTestApp()` with `truncateTables()` between each test</li>
+<li><strong>SRS tests are pure</strong> — all 21 tests exercise `nextInterval`/`buildSession` with no I/O; exact interval arithmetic is asserted (10min = 1/144 day, graduation to 3d, 8×2.5≈21d)</li>
+<li><strong>Accessibility is first-class</strong> — every E2E spec calls `checkA11y(page)`, plus dedicated `accessibility.spec.ts` covering aria-live, focus trapping, and color-not-sole-indicator</li>
+<li><strong>JWT attacks tested</strong> — `alg:none` and tampered-payload tokens verified to return 401</li>
+<li><strong>`run_tests.sh`</strong> uses a `trap EXIT` to always tear down Docker, accumulates per-suite exit codes, and exits non-zero if any suite fails</li>
+</ul>
+</ul></div>
+      </div>
+    </div>
+    <div class="round" id="engineer-round-1">
+      <div class="round-header">
+        <span class="round-badge">Engineer Round 1</span>
+        <h2>Implementation</h2>
+      </div>
+      <div class="agent-block engineer-agent">
+        <div class="agent-label"><span class="dot"></span> Software Engineer</div>
+        <div class="agent-content"><p>I need permission to write files. Please grant write access to the project directory and I'll implement everything.</p></div>
+      </div>
+      <div class="agent-block test-results fail">
+        <div class="agent-label"><span class="dot"></span> Test Results</div>
+        <div class="agent-content"><pre>==&gt; Starting test infrastructure (postgres:5433, redis:6380)...
+chess-opening-trainer_20260322_165115/run_tests.sh: line 18: docker: command not found
+
+==&gt; Tearing down test infrastructure...
+chess-opening-trainer_20260322_165115/run_tests.sh: line 12: docker: command not found</pre><div class="convergence fail">&#10007; Tests failed (round 1/5)</div></div>
+      </div>
+    </div>
+    <div class="round" id="engineer-round-2">
+      <div class="round-header">
+        <span class="round-badge">Engineer Round 2</span>
+        <h2>Implementation</h2>
+      </div>

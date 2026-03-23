@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Usage: ./pipeline.sh "your project idea"
-# Runs a Creative PM and Critical PM in a bounded loop until they converge on ideas.
+# Full pipeline: PM ideation → spec → plan → tests → implementation
 
 IDEA="${1:-}"
 if [ -z "$IDEA" ]; then
@@ -10,41 +10,58 @@ if [ -z "$IDEA" ]; then
   exit 1
 fi
 
-MAX_ROUNDS=5
+MAX_PM_ROUNDS=5
+MAX_ENGINEER_ROUNDS=5
 round=0
 converged="false"
 output="$IDEA"
 
-# Set up HTML log file
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-LOG_FILE="pipeline_${TIMESTAMP}.html"
+
+# Choose a project folder name based on the idea
+echo "Choosing project name..."
+PROJECT_NAME=$(claude -p "Given this project idea, output a short kebab-case folder name (2-4 words, lowercase, hyphens only, no special characters, no quotes):
+
+$IDEA
+
+Output the folder name only, nothing else." --output-format json | jq -r '.result' | tr -cd 'a-z0-9-' | sed 's/^-//;s/-$//')
+
+if [ -z "$PROJECT_NAME" ]; then
+  PROJECT_NAME="project"
+fi
+
+PROJECT_DIR="${PROJECT_NAME}_${TIMESTAMP}"
+LOG_FILE="pipeline_${PROJECT_NAME}_${TIMESTAMP}.html"
+
+echo "Project directory: $PROJECT_DIR"
+mkdir -p "$PROJECT_DIR"
+PROJECT_ABS="$(pwd)/$PROJECT_DIR"
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
 html_escape() {
   sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g'
 }
 
 markdown_to_html() {
-  # Bold: **text**
   sed \
     's/\*\*\([^*]*\)\*\*/<strong>\1<\/strong>/g; s/__\([^_]*\)__/<strong>\1<\/strong>/g' | \
-  # Convert lines starting with ### ## # to headings
   sed \
     's/^### \(.*\)$/<h4>\1<\/h4>/; s/^## \(.*\)$/<h3>\1<\/h3>/; s/^# \(.*\)$/<h2>\1<\/h2>/' | \
-  # Convert lines starting with - or * to list items (wrap in ul after)
   awk '
     /^[-*] / { in_list=1; sub(/^[-*] /, ""); print "<li>" $0 "</li>"; next }
     in_list && /^[^-*]/ { print "</ul>"; in_list=0 }
     { print }
     END { if (in_list) print "</ul>" }
   ' | \
-  # Wrap <li> groups in <ul>
   awk '
     /<li>/ && !in_ul { print "<ul>"; in_ul=1 }
     !/<li>/ && in_ul { print "</ul>"; in_ul=0 }
     { print }
     END { if (in_ul) print "</ul>" }
   ' | \
-  # Wrap plain text lines in <p> (not already in a tag)
   awk '
     /^</ { print; next }
     /^$/ { print "<br>"; next }
@@ -52,14 +69,59 @@ markdown_to_html() {
   '
 }
 
-# Write HTML header
+# Append a single-agent block to the HTML log
+# Usage: append_agent_block <css-class> <label> <content-var> [<badge-html>]
+append_agent_block() {
+  local css_class="$1"
+  local label="$2"
+  local content="$3"
+  local badge="${4:-}"
+  local content_html
+  content_html=$(echo "$content" | html_escape | markdown_to_html)
+  cat >> "$LOG_FILE" << HTML
+      <div class="agent-block ${css_class}">
+        <div class="agent-label"><span class="dot"></span> ${label}</div>
+        <div class="agent-content">${content_html}${badge}</div>
+      </div>
+HTML
+}
+
+# Add a nav link before #summary
+add_nav_link() {
+  local anchor="$1"
+  local label="$2"
+  sed -i '' "s|<a href=\"#summary\">|<a href=\"#${anchor}\">${label}</a>\n    <a href=\"#summary\">|" "$LOG_FILE"
+}
+
+# Wrap a section in the HTML log
+open_section() {
+  local anchor="$1"
+  local badge_label="$2"
+  local heading="$3"
+  cat >> "$LOG_FILE" << HTML
+    <div class="round" id="${anchor}">
+      <div class="round-header">
+        <span class="round-badge">${badge_label}</span>
+        <h2>${heading}</h2>
+      </div>
+HTML
+}
+
+close_section() {
+  echo "    </div>" >> "$LOG_FILE"
+}
+
+# ---------------------------------------------------------------------------
+# HTML scaffold
+# ---------------------------------------------------------------------------
+
 cat > "$LOG_FILE" << 'HTML_HEADER'
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PM Pipeline Log</title>
+  <title>Agent Pipeline Log</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f5f5f5; color: #222; }
@@ -89,24 +151,56 @@ cat > "$LOG_FILE" << 'HTML_HEADER'
     .agent-content li { margin-bottom: 6px; }
     .agent-content strong { color: #111; }
     .agent-content br { display: block; margin: 4px 0; }
+    pre { background: #f0f0f0; border-radius: 4px; padding: 12px 16px; overflow-x: auto; font-size: 0.85rem; margin: 10px 0; white-space: pre-wrap; word-break: break-all; }
 
-    .creative .agent-label { background: #e8f4fd; color: #1565c0; }
+    /* Agent colour themes */
+    .creative .agent-label  { background: #e8f4fd; color: #1565c0; }
     .creative .agent-label .dot { background: #1565c0; }
     .creative .agent-content { border-top: 3px solid #1565c0; }
 
-    .critical .agent-label { background: #fce4ec; color: #ad1457; }
+    .critical .agent-label  { background: #fce4ec; color: #ad1457; }
     .critical .agent-label .dot { background: #ad1457; }
     .critical .agent-content { border-top: 3px solid #ad1457; }
 
+    .spec-agent .agent-label  { background: #f3e5f5; color: #6a1b9a; }
+    .spec-agent .agent-label .dot { background: #6a1b9a; }
+    .spec-agent .agent-content { border-top: 3px solid #6a1b9a; }
+
+    .plan-agent .agent-label  { background: #e8eaf6; color: #283593; }
+    .plan-agent .agent-label .dot { background: #283593; }
+    .plan-agent .agent-content { border-top: 3px solid #283593; }
+
+    .testplan-agent .agent-label  { background: #fff3e0; color: #e65100; }
+    .testplan-agent .agent-label .dot { background: #e65100; }
+    .testplan-agent .agent-content { border-top: 3px solid #e65100; }
+
+    .qa-agent .agent-label  { background: #fff8e1; color: #f57f17; }
+    .qa-agent .agent-label .dot { background: #f57f17; }
+    .qa-agent .agent-content { border-top: 3px solid #f57f17; }
+
+    .engineer-agent .agent-label  { background: #e8f5e9; color: #1b5e20; }
+    .engineer-agent .agent-label .dot { background: #1b5e20; }
+    .engineer-agent .agent-content { border-top: 3px solid #1b5e20; }
+
+    .test-results .agent-label  { background: #f1f8e9; color: #33691e; }
+    .test-results .agent-label .dot { background: #33691e; }
+    .test-results.fail .agent-label  { background: #fbe9e7; color: #bf360c; }
+    .test-results.fail .agent-label .dot { background: #bf360c; }
+    .test-results .agent-content { border-top: 3px solid #33691e; }
+    .test-results.fail .agent-content { border-top: 3px solid #bf360c; }
+
     .convergence { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 20px; font-size: 0.82rem; font-weight: 600; margin-top: 12px; }
-    .convergence.yes { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
-    .convergence.no  { background: #fff8e1; color: #f57f17; border: 1px solid #ffe082; }
+    .convergence.yes   { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+    .convergence.no    { background: #fff8e1; color: #f57f17; border: 1px solid #ffe082; }
+    .convergence.error { background: #fbe9e7; color: #bf360c; border: 1px solid #ffccbc; }
+    .convergence.pass  { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+    .convergence.fail  { background: #fbe9e7; color: #bf360c; border: 1px solid #ffccbc; }
 
     .summary { background: white; border-radius: 8px; padding: 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); border-left: 4px solid #1a1a2e; margin-bottom: 32px; }
     .summary h2 { font-size: 1rem; margin-bottom: 12px; color: #1a1a2e; }
     .summary p { font-size: 0.92rem; color: #444; line-height: 1.6; }
 
-    .final-ideas { background: white; border-radius: 8px; padding: 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); border-left: 4px solid #1565c0; }
+    .final-ideas { background: white; border-radius: 8px; padding: 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); border-left: 4px solid #1565c0; margin-bottom: 32px; }
     .final-ideas h2 { font-size: 1rem; margin-bottom: 16px; color: #1565c0; }
     .final-ideas .content { font-size: 0.92rem; line-height: 1.7; }
     .final-ideas .content p { margin-bottom: 10px; }
@@ -117,38 +211,35 @@ cat > "$LOG_FILE" << 'HTML_HEADER'
 <body>
 HTML_HEADER
 
-# Write the idea into the header (after we have it)
 cat >> "$LOG_FILE" << HTML_HEADER2
   <header>
-    <h1>PM Pipeline Log</h1>
+    <h1>Agent Pipeline Log</h1>
     <div class="idea">Idea: $(echo "$IDEA" | html_escape)</div>
   </header>
   <nav id="nav">
     <a href="#summary">Summary</a>
-    <a href="#final">Final Ideas</a>
   </nav>
   <main>
 HTML_HEADER2
 
-echo "=== Starting PM Pipeline ==="
+# Add the static nav links up front so add_nav_link insertions work
+sed -i '' "s|<a href=\"#summary\">|<a href=\"#final\">Final Ideas</a>\n    <a href=\"#summary\">|" "$LOG_FILE"
+
+echo "=== Starting Agent Pipeline ==="
 echo "Idea: $IDEA"
-echo "Log: $LOG_FILE"
+echo "Log:  $LOG_FILE"
 echo ""
 
-while [ "$converged" != "true" ] && [ "$round" -lt "$MAX_ROUNDS" ]; do
+# ---------------------------------------------------------------------------
+# Phase 1: PM Ideation Loop
+# ---------------------------------------------------------------------------
+
+while [ "$converged" != "true" ] && [ "$round" -lt "$MAX_PM_ROUNDS" ]; do
   round=$((round + 1))
-  echo "--- Round $round ---"
+  echo "--- PM Round $round ---"
 
-  # Add nav link and open round section
-  sed -i '' "s|<a href=\"#final\">|<a href=\"#round-${round}\">Round ${round}</a>\n    <a href=\"#final\">|" "$LOG_FILE"
-
-  cat >> "$LOG_FILE" << HTML
-    <div class="round" id="round-${round}">
-      <div class="round-header">
-        <span class="round-badge">Round ${round}</span>
-        <h2>Ideation &amp; Evaluation</h2>
-      </div>
-HTML
+  add_nav_link "round-${round}" "PM Round ${round}"
+  open_section "round-${round}" "Round ${round}" "Ideation &amp; Evaluation"
 
   # Creative PM
   echo "[Creative PM] Generating ideas..."
@@ -162,16 +253,9 @@ For each idea provide: a name, a 2-3 sentence description, the user value, and a
 If this is not round 1, incorporate any critical feedback from the previous round.
 Be imaginative and focus on user delight." \
     --output-format json | jq -r '.result')
-
   echo "[Creative PM] Done."
 
-  creative_html=$(echo "$creative" | html_escape | markdown_to_html)
-  cat >> "$LOG_FILE" << HTML
-      <div class="agent-block creative">
-        <div class="agent-label"><span class="dot"></span> Creative PM</div>
-        <div class="agent-content">${creative_html}</div>
-      </div>
-HTML
+  append_agent_block "creative" "Creative PM" "$creative"
 
   # Critical PM
   echo "[Critical PM] Evaluating ideas..."
@@ -189,10 +273,8 @@ Your task:
 End your response with this JSON on its own line, with no other text on that line:
 {\"converged\": true, \"feedback\": \"brief reason\"} or {\"converged\": false, \"feedback\": \"what needs improvement\"}" \
     --output-format json | jq -r '.result')
-
   echo "[Critical PM] Done."
 
-  # Extract convergence signal
   json_line=$(echo "$evaluation" | grep -o '{"converged": *[a-z]*[^}]*}' | tail -1)
   converged=$(echo "$json_line" | jq -r '.converged // "false"' 2>/dev/null || echo "false")
   feedback=$(echo "$json_line" | jq -r '.feedback // ""' 2>/dev/null || echo "")
@@ -201,61 +283,293 @@ End your response with this JSON on its own line, with no other text on that lin
   [ -n "$feedback" ] && echo "Feedback: $feedback"
   echo ""
 
-  # Strip the JSON line from the evaluation before displaying
   evaluation_display=$(echo "$evaluation" | grep -v '{"converged":')
-  evaluation_html=$(echo "$evaluation_display" | html_escape | markdown_to_html)
-
   if [ "$converged" = "true" ]; then
-    convergence_html='<div class="convergence yes">&#10003; Converged</div>'
+    badge='<div class="convergence yes">&#10003; Converged</div>'
   else
-    convergence_html="<div class=\"convergence no\">&#8635; Needs refinement &mdash; $(echo "$feedback" | html_escape)</div>"
+    badge="<div class=\"convergence no\">&#8635; Needs refinement &mdash; $(echo "$feedback" | html_escape)</div>"
   fi
-
-  cat >> "$LOG_FILE" << HTML
-      <div class="agent-block critical">
-        <div class="agent-label"><span class="dot"></span> Critical PM</div>
-        <div class="agent-content">${evaluation_html}${convergence_html}</div>
-      </div>
-    </div>
-HTML
+  append_agent_block "critical" "Critical PM" "$evaluation_display" "$badge"
+  close_section
 
   output="Creative PM ideas:
 $creative
 
 Critical PM feedback:
 $evaluation"
-
 done
 
-# Summary and final ideas
-if [ "$converged" = "true" ]; then
-  summary_text="Converged after ${round} round(s). The Critical PM determined the ideas were ready to move forward."
-else
-  summary_text="Reached the maximum of ${MAX_ROUNDS} rounds without full convergence. The ideas below represent the best state reached."
-fi
+# ---------------------------------------------------------------------------
+# Convergence gate
+# ---------------------------------------------------------------------------
 
-final_html=$(echo "$creative" | html_escape | markdown_to_html)
+if [ "$converged" != "true" ]; then
+  echo "ERROR: PM ideation did not converge after $MAX_PM_ROUNDS rounds. Stopping."
 
-cat >> "$LOG_FILE" << HTML
+  cat >> "$LOG_FILE" << HTML
     <div class="summary" id="summary">
-      <h2>Pipeline Summary</h2>
-      <p>${summary_text}</p>
-    </div>
-    <div class="final-ideas" id="final">
-      <h2>Final Ideas</h2>
-      <div class="content">${final_html}</div>
+      <h2>Pipeline Stopped</h2>
+      <p>PM ideation did not converge after ${MAX_PM_ROUNDS} rounds. No specification or code was produced.</p>
     </div>
   </main>
 </body>
 </html>
 HTML
 
-echo "=== Pipeline Complete ==="
-if [ "$converged" = "true" ]; then
-  echo "Converged after $round round(s)."
-else
-  echo "Reached max rounds ($MAX_ROUNDS) without full convergence."
+  echo "Log saved to: $LOG_FILE"
+  exit 1
 fi
+
+echo ""
+echo "=== PM ideation converged. Proceeding to build pipeline. ==="
+echo ""
+
+# Write final ideas to HTML
+final_html=$(echo "$creative" | html_escape | markdown_to_html)
+cat >> "$LOG_FILE" << HTML
+    <div class="final-ideas" id="final">
+      <h2>Final Ideas (from PM Loop)</h2>
+      <div class="content">${final_html}</div>
+    </div>
+HTML
+
+echo ""
+
+# ---------------------------------------------------------------------------
+# Phase 2: Specification
+# ---------------------------------------------------------------------------
+
+echo "=== [Spec Agent] Writing SPEC.md ==="
+add_nav_link "phase-spec" "Spec"
+open_section "phase-spec" "Spec Agent" "Project Specification"
+
+spec=$(claude -p "You are a senior product manager and technical writer.
+
+Here are the converged product feature ideas you must turn into a specification:
+$creative
+
+Write a comprehensive project specification in Markdown. Include:
+- Project overview and goals
+- Target users and personas
+- Core features for MVP (be specific and concrete)
+- Future / post-MVP features
+- User stories for each MVP feature
+- Functional requirements
+- Non-functional requirements (performance, security, accessibility)
+- Explicitly out-of-scope items
+
+Be thorough. This document will drive the implementation plan and tests." \
+  --allowedTools "Read,Glob,Grep" \
+  --output-format json | jq -r '.result')
+
+echo "$spec" > "$PROJECT_DIR/SPEC.md"
+echo "[Spec Agent] Done. Written to $PROJECT_DIR/SPEC.md"
+
+append_agent_block "spec-agent" "Spec Agent" "$spec"
+close_section
+
+# ---------------------------------------------------------------------------
+# Phase 3: Implementation Plan
+# ---------------------------------------------------------------------------
+
+echo "=== [Plan Agent] Writing PLAN.md ==="
+add_nav_link "phase-plan" "Plan"
+open_section "phase-plan" "Plan Agent" "Implementation Plan"
+
+plan=$(claude -p "You are a senior software architect.
+
+Here is the project specification:
+$(cat "$PROJECT_DIR/SPEC.md")
+
+Write a detailed technical implementation plan in Markdown. Include:
+- Chosen tech stack with rationale (be specific: language, frameworks, libraries)
+- Directory and file structure
+- Data models / schema
+- Key components and their responsibilities
+- API design (if applicable)
+- Implementation phases, each with concrete deliverables
+- Dependencies between phases
+- A 'run_tests.sh' script specification: exactly what command(s) to run to execute all tests
+
+The tech stack choices must be concrete enough that an engineer can start immediately." \
+  --allowedTools "Read,Glob,Grep" \
+  --output-format json | jq -r '.result')
+
+echo "$plan" > "$PROJECT_DIR/PLAN.md"
+echo "[Plan Agent] Done. Written to $PROJECT_DIR/PLAN.md"
+
+append_agent_block "plan-agent" "Plan Agent" "$plan"
+close_section
+
+# ---------------------------------------------------------------------------
+# Phase 4: Test Plan
+# ---------------------------------------------------------------------------
+
+echo "=== [Test Plan Agent] Writing TESTPLAN.md ==="
+add_nav_link "phase-testplan" "Test Plan"
+open_section "phase-testplan" "Test Plan Agent" "Testing Plan"
+
+testplan=$(claude -p "You are a senior QA engineer.
+
+Here is the project specification:
+$(cat "$PROJECT_DIR/SPEC.md")
+
+Here is the implementation plan:
+$(cat "$PROJECT_DIR/PLAN.md")
+
+Write a comprehensive testing plan in Markdown. Include:
+- Testing philosophy and approach
+- For each MVP feature: specific unit test cases (function/component level)
+- Integration test cases (end-to-end flows)
+- Edge cases and error conditions to cover
+- Test file names and locations (matching the directory structure in PLAN.md)
+- The exact test runner command (must match what will go in run_tests.sh)" \
+  --allowedTools "Read,Glob,Grep" \
+  --output-format json | jq -r '.result')
+
+echo "$testplan" > "$PROJECT_DIR/TESTPLAN.md"
+echo "[Test Plan Agent] Done. Written to $PROJECT_DIR/TESTPLAN.md"
+
+append_agent_block "testplan-agent" "Test Plan Agent" "$testplan"
+close_section
+
+# ---------------------------------------------------------------------------
+# Phase 5: QA Agent — write the tests
+# ---------------------------------------------------------------------------
+
+echo "=== [QA Agent] Writing tests ==="
+add_nav_link "phase-qa" "QA"
+open_section "phase-qa" "QA Agent" "Test Implementation"
+
+qa_output=$(claude -p "You are a senior QA engineer. Your job is to write the tests ONLY — do not write any implementation code.
+
+Project directory: $PROJECT_DIR
+
+You have three reference documents:
+- SPEC.md: $(cat "$PROJECT_DIR/SPEC.md")
+- PLAN.md: $(cat "$PROJECT_DIR/PLAN.md")
+- TESTPLAN.md: $(cat "$PROJECT_DIR/TESTPLAN.md")
+
+Your tasks:
+1. Create all test files described in TESTPLAN.md inside $PROJECT_DIR, following the directory structure in PLAN.md.
+2. Write thorough tests for every case in TESTPLAN.md. Import implementation modules as specified in PLAN.md (they do not exist yet — that is expected and fine).
+3. Create $PROJECT_DIR/run_tests.sh — an executable shell script that installs any test dependencies and runs the full test suite. It must exit 0 on success and non-zero on failure.
+
+Write real, runnable tests. Do not use placeholders." \
+  --allowedTools "Read,Glob,Grep,Write(${PROJECT_ABS}/**),Edit(${PROJECT_ABS}/**),Bash" \
+  --output-format json | jq -r '.result')
+
+echo "[QA Agent] Done."
+
+append_agent_block "qa-agent" "QA Agent" "$qa_output"
+close_section
+
+# Make sure run_tests.sh is executable
+if [ -f "$PROJECT_DIR/run_tests.sh" ]; then
+  chmod +x "$PROJECT_DIR/run_tests.sh"
+fi
+
+# ---------------------------------------------------------------------------
+# Phase 6: Engineer Loop — write code until tests pass
+# ---------------------------------------------------------------------------
+
+echo ""
+echo "=== [Engineer] Implementing until tests pass (max $MAX_ENGINEER_ROUNDS rounds) ==="
+add_nav_link "phase-engineer" "Engineer"
+
+engineer_round=0
+tests_passed="false"
+test_output=""
+
+while [ "$tests_passed" != "true" ] && [ "$engineer_round" -lt "$MAX_ENGINEER_ROUNDS" ]; do
+  engineer_round=$((engineer_round + 1))
+  echo "--- Engineer Round $engineer_round ---"
+
+  open_section "engineer-round-${engineer_round}" "Engineer Round ${engineer_round}" "Implementation"
+
+  # Build the prompt — include test failure output on subsequent rounds
+  if [ "$engineer_round" -eq 1 ]; then
+    failure_context="This is the first implementation attempt."
+  else
+    failure_context="The previous implementation attempt failed. Here is the test output:
+
+$test_output
+
+Fix the failing tests. Do not modify the test files."
+  fi
+
+  engineer_output=$(claude -p "You are a senior software engineer.
+
+Project directory: $PROJECT_DIR
+
+Reference documents:
+- SPEC.md: $(cat "$PROJECT_DIR/SPEC.md")
+- PLAN.md: $(cat "$PROJECT_DIR/PLAN.md")
+
+$failure_context
+
+Your tasks:
+1. Implement all code described in PLAN.md inside $PROJECT_DIR. Follow the directory structure, tech stack, and data models exactly.
+2. Do NOT modify any test files.
+3. Make all tests in the test suite pass.
+
+Write complete, production-quality code." \
+    --allowedTools "Read,Glob,Grep,Write(${PROJECT_ABS}/**),Edit(${PROJECT_ABS}/**),Bash" \
+    --output-format json | jq -r '.result')
+
+  echo "[Engineer] Done. Running tests..."
+  append_agent_block "engineer-agent" "Software Engineer" "$engineer_output"
+
+  # Run the tests
+  if bash "$PROJECT_DIR/run_tests.sh" > /tmp/test_run_output.txt 2>&1; then
+    tests_passed="true"
+    test_output=$(cat /tmp/test_run_output.txt)
+    badge='<div class="convergence pass">&#10003; All tests passing</div>'
+    test_result_class="test-results"
+    echo "Tests PASSED."
+  else
+    test_output=$(cat /tmp/test_run_output.txt)
+    badge="<div class=\"convergence fail\">&#10007; Tests failed (round ${engineer_round}/${MAX_ENGINEER_ROUNDS})</div>"
+    test_result_class="test-results fail"
+    echo "Tests FAILED. Output:"
+    echo "$test_output"
+  fi
+
+  test_output_html=$(echo "$test_output" | html_escape)
+  cat >> "$LOG_FILE" << HTML
+      <div class="agent-block ${test_result_class}">
+        <div class="agent-label"><span class="dot"></span> Test Results</div>
+        <div class="agent-content"><pre>${test_output_html}</pre>${badge}</div>
+      </div>
+HTML
+  close_section
+
+  echo ""
+done
+
+# ---------------------------------------------------------------------------
+# Final summary
+# ---------------------------------------------------------------------------
+
+if [ "$tests_passed" = "true" ]; then
+  summary_text="Pipeline completed successfully. PM ideation converged after ${round} round(s). All tests passed after ${engineer_round} engineering round(s). Project written to ${PROJECT_DIR}/."
+  echo "=== Pipeline Complete: All tests passing after $engineer_round round(s). ==="
+else
+  summary_text="Engineer loop reached the maximum of ${MAX_ENGINEER_ROUNDS} rounds without all tests passing. Partial implementation is in ${PROJECT_DIR}/. Review the final test output for remaining failures."
+  echo "=== Pipeline stopped: max engineer rounds ($MAX_ENGINEER_ROUNDS) reached without full test pass. ==="
+fi
+
+cat >> "$LOG_FILE" << HTML
+    <div class="summary" id="summary">
+      <h2>Pipeline Summary</h2>
+      <p>${summary_text}</p>
+    </div>
+  </main>
+</body>
+</html>
+HTML
+
 echo ""
 echo "Log saved to: $LOG_FILE"
-echo "Open with: open $LOG_FILE"
+echo "Project:      $PROJECT_DIR/"
+echo "Open with:    open $LOG_FILE"

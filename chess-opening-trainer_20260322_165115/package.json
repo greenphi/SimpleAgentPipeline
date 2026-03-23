@@ -1,0 +1,10 @@
+{
+  "name": "chess-opening-trainer",
+  "private": true,
+  "scripts": {
+    "test": "sh run_tests.sh"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}

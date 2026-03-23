@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agent Pipeline Log</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f5f5f5; color: #222; }
+
+    header { background: #1a1a2e; color: white; padding: 24px 32px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+    header h1 { font-size: 1.2rem; font-weight: 600; margin-bottom: 4px; }
+    header .idea { font-size: 0.9rem; color: #aab; }
+
+    nav { background: #16213e; padding: 10px 32px; display: flex; gap: 12px; flex-wrap: wrap; position: sticky; top: 72px; z-index: 99; border-bottom: 1px solid #0f3460; }
+    nav a { color: #7ec8e3; font-size: 0.82rem; text-decoration: none; padding: 4px 10px; border-radius: 12px; border: 1px solid #0f3460; transition: background 0.15s; }
+    nav a:hover { background: #0f3460; }
+
+    main { max-width: 960px; margin: 32px auto; padding: 0 24px 64px; }
+
+    .round { margin-bottom: 48px; }
+    .round-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #ddd; }
+    .round-badge { background: #1a1a2e; color: white; font-size: 0.8rem; font-weight: 700; padding: 4px 12px; border-radius: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .round-header h2 { font-size: 1.1rem; color: #555; font-weight: 500; }
+
+    .agent-block { border-radius: 8px; margin-bottom: 16px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    .agent-label { padding: 10px 16px; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; display: flex; align-items: center; gap: 8px; }
+    .agent-label .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+    .agent-content { padding: 20px 24px; background: white; font-size: 0.92rem; line-height: 1.7; }
+    .agent-content h2, .agent-content h3, .agent-content h4 { margin: 16px 0 6px; color: #333; }
+    .agent-content p { margin-bottom: 10px; }
+    .agent-content ul { margin: 8px 0 12px 20px; }
+    .agent-content li { margin-bottom: 6px; }
+    .agent-content strong { color: #111; }
+    .agent-content br { display: block; margin: 4px 0; }
+    pre { background: #f0f0f0; border-radius: 4px; padding: 12px 16px; overflow-x: auto; font-size: 0.85rem; margin: 10px 0; white-space: pre-wrap; word-break: break-all; }
+
+    /* Agent colour themes */
+    .creative .agent-label  { background: #e8f4fd; color: #1565c0; }
+    .creative .agent-label .dot { background: #1565c0; }
+    .creative .agent-content { border-top: 3px solid #1565c0; }
+
+    .critical .agent-label  { background: #fce4ec; color: #ad1457; }
+    .critical .agent-label .dot { background: #ad1457; }
+    .critical .agent-content { border-top: 3px solid #ad1457; }
+
+    .spec-agent .agent-label  { background: #f3e5f5; color: #6a1b9a; }
+    .spec-agent .agent-label .dot { background: #6a1b9a; }
+    .spec-agent .agent-content { border-top: 3px solid #6a1b9a; }
+
+    .plan-agent .agent-label  { background: #e8eaf6; color: #283593; }
+    .plan-agent .agent-label .dot { background: #283593; }
+    .plan-agent .agent-content { border-top: 3px solid #283593; }
+
+    .testplan-agent .agent-label  { background: #fff3e0; color: #e65100; }
+    .testplan-agent .agent-label .dot { background: #e65100; }
+    .testplan-agent .agent-content { border-top: 3px solid #e65100; }
+
+    .qa-agent .agent-label  { background: #fff8e1; color: #f57f17; }
+    .qa-agent .agent-label .dot { background: #f57f17; }
+    .qa-agent .agent-content { border-top: 3px solid #f57f17; }
+
+    .engineer-agent .agent-label  { background: #e8f5e9; color: #1b5e20; }
+    .engineer-agent .agent-label .dot { background: #1b5e20; }
+    .engineer-agent .agent-content { border-top: 3px solid #1b5e20; }
+
+    .test-results .agent-label  { background: #f1f8e9; color: #33691e; }
+    .test-results .agent-label .dot { background: #33691e; }
+    .test-results.fail .agent-label  { background: #fbe9e7; color: #bf360c; }
+    .test-results.fail .agent-label .dot { background: #bf360c; }
+    .test-results .agent-content { border-top: 3px solid #33691e; }
+    .test-results.fail .agent-content { border-top: 3px solid #bf360c; }
+
+    .convergence { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 20px; font-size: 0.82rem; font-weight: 600; margin-top: 12px; }
+    .convergence.yes   { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+    .convergence.no    { background: #fff8e1; color: #f57f17; border: 1px solid #ffe082; }
+    .convergence.error { background: #fbe9e7; color: #bf360c; border: 1px solid #ffccbc; }
+    .convergence.pass  { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+    .convergence.fail  { background: #fbe9e7; color: #bf360c; border: 1px solid #ffccbc; }
+
+    .summary { background: white; border-radius: 8px; padding: 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); border-left: 4px solid #1a1a2e; margin-bottom: 32px; }
+    .summary h2 { font-size: 1rem; margin-bottom: 12px; color: #1a1a2e; }
+    .summary p { font-size: 0.92rem; color: #444; line-height: 1.6; }
+
+    .final-ideas { background: white; border-radius: 8px; padding: 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); border-left: 4px solid #1565c0; margin-bottom: 32px; }
+    .final-ideas h2 { font-size: 1rem; margin-bottom: 16px; color: #1565c0; }
+    .final-ideas .content { font-size: 0.92rem; line-height: 1.7; }
+    .final-ideas .content p { margin-bottom: 10px; }
+    .final-ideas .content ul { margin: 8px 0 12px 20px; }
+    .final-ideas .content li { margin-bottom: 6px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Agent Pipeline Log</h1>
+    <div class="idea">Idea: a web-based chess opening trainer</div>
+  </header>
+  <nav id="nav">
+    <a href="#final">Final Ideas</a>
+    <a href="#round-1">PM Round 1</a>
+    <a href="#phase-spec">Spec</a>
+    <a href="#summary">Summary</a>
+  </nav>
+  <main>
+    <div class="round" id="round-1">
+      <div class="round-header">
+        <span class="round-badge">Round 1</span>
+        <h2>Ideation &amp; Evaluation</h2>
+      </div>
+      <div class="agent-block creative">
+        <div class="agent-label"><span class="dot"></span> Creative PM</div>
+        <div class="agent-content"><h2>Chess Opening Trainer — Feature Ideas</h2>
+<br>
+<p>---</p>
+<br>
+<h3>1. Opening DNA Profile</h3>
+<p>Generate a visual "fingerprint" of a player's opening repertoire based on their game history (imported via PGN or connected to Lichess/Chess.com). Shows which openings they gravitate toward, their win rates, and blind spots.</p>
+<strong>User value:</strong> Players understand their own style and get personalized recommendations rather than generic content.
+<strong>Complexity:</strong> Medium
+<br>
+<p>---</p>
+<br>
+<h3>2. Mistake Replay Arena</h3>
+<p>After a training session, the trainer surfaces the 3 moves you got wrong most often and drills *only* those positions — spaced-repetition style — until you nail them consistently.</p>
+<strong>User value:</strong> Eliminates the frustration of re-studying what you already know; focuses effort where it matters.
+<strong>Complexity:</strong> Low
+<br>
+<p>---</p>
+<br>
+<h3>3. Grandmaster Storytelling Mode</h3>
+<p>Each opening comes with a narrative: the historical duel where it was first played, the player's psychology, and why the move order matters. Moves are revealed cinematic-ally with annotations voiced in character.</p>
+<strong>User value:</strong> Makes memorization emotionally sticky; learners remember stories, not move strings.
+<strong>Complexity:</strong> Medium
+<br>
+<p>---</p>
+<br>
+<h3>4. Opponent Simulator</h3>
+<p>Train against a simulated opponent who specifically *exploits* your repertoire gaps. The engine knows which side-lines you haven't studied and steers into them.</p>
+<strong>User value:</strong> Prepares players for real over-the-board surprises; closes the gap between study and practice.
+<strong>Complexity:</strong> High
+<br>
+<p>---</p>
+<br>
+<h3>5. Opening Clash — Async Multiplayer</h3>
+<p>Challenge a friend to a "repertoire duel": both players are quizzed on the same opening tree and scores are compared on a shared leaderboard. Trash-talk thread included.</p>
+<strong>User value:</strong> Social accountability and friendly competition dramatically increase return visits and study consistency.
+<strong>Complexity:</strong> Medium
+<br>
+<p>---</p>
+<br>
+<h3>6. Move Intention Tagging</h3>
+<p>Before revealing the correct move, the player picks the *idea* behind it (e.g., "Control center," "Develop minor piece," "Provoke weakness"). Right move, wrong idea = partial credit and a short lesson.</p>
+<strong>User value:</strong> Builds positional understanding, not just pattern matching — the difference between a good amateur and a strong club player.
+<strong>Complexity:</strong> Low
+<br>
+<p>---</p>
+<br>
+<h3>7. Live Over-the-Board Import</h3>
+<p>After an OTB tournament game, scan or enter the opening moves; the trainer immediately shows where you deviated from your prep and what the engine preferred.</p>
+<strong>User value:</strong> Closes the feedback loop between study and real games instantly, while the game is fresh.
+<strong>Complexity:</strong> Medium</div>
+      </div>
+      <div class="agent-block critical">
+        <div class="agent-label"><span class="dot"></span> Critical PM</div>
+        <div class="agent-content"><h3>Critical PM Evaluation — Chess Opening Trainer</h3>
+<br>
+<p>---</p>
+<br>
+<h4>Scoring</h4>
+<br>
+<p>| # | Idea | Feasibility | User Impact | Effort | Notes |</p>
+<p>|---|------|-------------|-------------|--------|-------|</p>
+<p>| 1 | Opening DNA Profile | 7 | 8 | 6 | API integrations + visualization; strong retention hook |</p>
+<p>| 2 | Mistake Replay Arena | 9 | 9 | 3 | Spaced repetition is solved; this is the core learning loop |</p>
+<p>| 3 | Grandmaster Storytelling | 4 | 6 | 9 | <strong>See fatal flaw below</strong> |</p>
+<p>| 4 | Opponent Simulator | 5 | 9 | 9 | High reward, high risk; knowledge modeling is hard to get right |</p>
+<p>| 5 | Opening Clash | 6 | 6 | 7 | Social infrastructure cost outweighs marginal retention gain |</p>
+<p>| 6 | Move Intention Tagging | 9 | 8 | 3 | Low effort, high pedagogical differentiation |</p>
+<p>| 7 | Live OTB Import | 7 | 8 | 5 | Closes the study-play loop; clear use case for tournament players |</p>
+<br>
+<p>---</p>
+<br>
+<h4>Fatal Flaws</h4>
+<br>
+<strong>#3 — Grandmaster Storytelling Mode: ELIMINATED</strong>
+<br>
+<p>This is a content business disguised as a software feature. To do it properly, you need historically accurate narratives for hundreds of opening variations — written, fact-checked, and voiced. That is an ongoing operational cost that compounds with every new opening added. If you substitute AI-generated narration, you risk factual errors on historical games (a credibility-killer in the chess community, which is intensely pedantic). The "cinematic" voiceover is a production pipeline, not a product feature. Kill it unless content is a declared core competency.</p>
+<br>
+<p>---</p>
+<br>
+<h4>Concerns (not fatal, but real)</h4>
+<br>
+<strong>#4 — Opponent Simulator:</strong> The user knowledge model is the entire bet. If the gap-detection is wrong, the sim steers users into lines they *have* studied, or overwhelms them with lines that are too far outside their prep. Either outcome is frustrating, not educational. This needs a very tight prototype before committing to full build.
+<br>
+<strong>#5 — Opening Clash:</strong> The "trash-talk thread" is a product smell — it signals the social angle needs justification. Chess opening study skews solo and intrinsic. Async multiplayer demands account infrastructure, notifications, and moderation. The feature needs a sharper thesis: is the goal accountability (study streaks with a friend) or competition (leaderboards)? As spec'd, it's neither cleanly.
+<br>
+<p>---</p>
+<br>
+<h4>Final Rankings</h4>
+<br>
+<p>1. <strong>#2 Mistake Replay Arena</strong> — Build first. Lowest effort, highest impact, directly solves the #1 training frustration. This is the retention engine.</p>
+<p>2. <strong>#6 Move Intention Tagging</strong> — Build alongside #2. Cheap, differentiating, and pedagogically superior to every competitor doing rote drilling. This is your positioning.</p>
+<p>3. <strong>#1 Opening DNA Profile</strong> — Strong second release. Personalization hooks users and justifies continued engagement. Requires platform integrations but the value is clear.</p>
+<p>4. <strong>#7 Live OTB Import</strong> — High value for the serious segment. Medium effort. Strong for tournament season marketing.</p>
+<p>5. <strong>#4 Opponent Simulator</strong> — Prototype only. Validate the gap-detection accuracy before committing. If the model is good, this becomes your flagship. If not, it's a frustrating product.</p>
+<p>6. <strong>#5 Opening Clash</strong> — Deprioritize. Rewrite the brief to pick one of: accountability (friend streaks) or competition (leaderboards). Don't build both until one proves out.</p>
+<br>
+<p>---</p>
+<br>
+<h4>Convergence Verdict</h4>
+<br>
+<p>The top four ideas (#2, #6, #1, #7) form a coherent, sequenced roadmap with clear user value and manageable scope. #3 is cleanly cut. #4 and #5 need sharper specs before prioritization. The remaining set is actionable.</p><div class="convergence yes">&#10003; Converged</div></div>
+      </div>
+    </div>
+    <div class="final-ideas" id="final">
+      <h2>Final Ideas (from PM Loop)</h2>
+      <div class="content"><h2>Chess Opening Trainer — Feature Ideas</h2>
+<br>
+<p>---</p>
+<br>
+<h3>1. Opening DNA Profile</h3>
+<p>Generate a visual "fingerprint" of a player's opening repertoire based on their game history (imported via PGN or connected to Lichess/Chess.com). Shows which openings they gravitate toward, their win rates, and blind spots.</p>
+<strong>User value:</strong> Players understand their own style and get personalized recommendations rather than generic content.
+<strong>Complexity:</strong> Medium
+<br>
+<p>---</p>
+<br>
+<h3>2. Mistake Replay Arena</h3>
+<p>After a training session, the trainer surfaces the 3 moves you got wrong most often and drills *only* those positions — spaced-repetition style — until you nail them consistently.</p>
+<strong>User value:</strong> Eliminates the frustration of re-studying what you already know; focuses effort where it matters.
+<strong>Complexity:</strong> Low
+<br>
+<p>---</p>
+<br>
+<h3>3. Grandmaster Storytelling Mode</h3>
+<p>Each opening comes with a narrative: the historical duel where it was first played, the player's psychology, and why the move order matters. Moves are revealed cinematic-ally with annotations voiced in character.</p>
+<strong>User value:</strong> Makes memorization emotionally sticky; learners remember stories, not move strings.
+<strong>Complexity:</strong> Medium
+<br>
+<p>---</p>
+<br>
+<h3>4. Opponent Simulator</h3>
+<p>Train against a simulated opponent who specifically *exploits* your repertoire gaps. The engine knows which side-lines you haven't studied and steers into them.</p>
+<strong>User value:</strong> Prepares players for real over-the-board surprises; closes the gap between study and practice.
+<strong>Complexity:</strong> High
+<br>
+<p>---</p>
+<br>
+<h3>5. Opening Clash — Async Multiplayer</h3>
+<p>Challenge a friend to a "repertoire duel": both players are quizzed on the same opening tree and scores are compared on a shared leaderboard. Trash-talk thread included.</p>
+<strong>User value:</strong> Social accountability and friendly competition dramatically increase return visits and study consistency.
+<strong>Complexity:</strong> Medium
+<br>
+<p>---</p>
+<br>
+<h3>6. Move Intention Tagging</h3>
+<p>Before revealing the correct move, the player picks the *idea* behind it (e.g., "Control center," "Develop minor piece," "Provoke weakness"). Right move, wrong idea = partial credit and a short lesson.</p>
+<strong>User value:</strong> Builds positional understanding, not just pattern matching — the difference between a good amateur and a strong club player.
+<strong>Complexity:</strong> Low
+<br>
+<p>---</p>
+<br>
+<h3>7. Live Over-the-Board Import</h3>
+<p>After an OTB tournament game, scan or enter the opening moves; the trainer immediately shows where you deviated from your prep and what the engine preferred.</p>
+<strong>User value:</strong> Closes the feedback loop between study and real games instantly, while the game is fresh.
+<strong>Complexity:</strong> Medium</div>
+    </div>
+    <div class="round" id="phase-spec">
+      <div class="round-header">
+        <span class="round-badge">Spec Agent</span>
+        <h2>Project Specification</h2>
+      </div>
